@@ -14,7 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useSnackbar } from '../context/SnackbarContext';
-import { API_URL } from '@/config/api';
+import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandling';
 
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -33,17 +35,27 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/login`, {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password,
       }, {
-        timeout: 10000, // 10 seconds timeout
+        timeout: 10000,
       });
 
       if (response.data) {
         showSnackbar('Logged in successfully', 'success');
+        
+        // Use the context login function
+        login({
+          id: response.data.id || response.data.userId,
+          username: response.data.username,
+          email: response.data.email,
+          role: response.data.role,
+          avatar: response.data.avatar,
+        }, response.data.token);
+
         // Navigate to main app
-        router.replace('/dashboard');
+        router.replace('/(tabs)');
       }
     } catch (error) {
       handleApiError(error, showSnackbar);

@@ -1,98 +1,225 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { incidentService } from '../../services/incidentService';
+import { StatusCard } from '../../components/StatusCard';
+import { LiveMapCard } from '../../components/LiveMapCard';
+import { GridActionCard } from '../../components/GridActionCard';
+import { EmergencyButton } from '../../components/EmergencyButton';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const fetchStats = async () => {
+    try {
+      const incidents = await incidentService.getMyIncidents();
+      const total = incidents.length;
+      const pending = incidents.filter(i => i.status === 'pending').length;
+      const resolved = incidents.filter(i => i.status === 'resolved').length;
+      setStats({ total, pending, resolved });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchStats();
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Custom App Bar */}
+      <View style={styles.appBar}>
+        <TouchableOpacity style={styles.menuButton}>
+          <MaterialCommunityIcons name="menu" size={28} color="#333" />
+        </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoIcon}>
+            <MaterialCommunityIcons name="shield" size={20} color="white" />
+          </View>
+          <Text style={styles.logoText}>SafeCampus</Text>
+        </View>
+        <TouchableOpacity onPress={logout} style={styles.profileButton}>
+          <MaterialCommunityIcons name="logout" size={24} color="#FF3B70" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF3B70']} />
+        }
+      >
+        <StatusCard />
+        
+        <LiveMapCard />
+
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.grid}>
+          <GridActionCard
+            title="Report"
+            subtitle="Submit incident"
+            icon="alert-octagon"
+            color="#FF3B70"
+            onPress={() => router.push('/submit-incident')}
+          />
+          <GridActionCard
+            title="My Reports"
+            subtitle="View history"
+            icon="file-document-outline"
+            color="#673AB7"
+            onPress={() => router.push('/my-incidents')}
+          />
+          <GridActionCard
+            title="Emergency"
+            subtitle="Rapid response"
+            icon="phone-alert"
+            color="#F44336"
+            onPress={() => {}}
+          />
+          <GridActionCard
+            title="Safety Tips"
+            subtitle="Campus guide"
+            icon="shield-check-outline"
+            color="#4CAF50"
+            onPress={() => {}}
+          />
+        </View>
+
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+           <View style={styles.statBox}>
+             <Text style={styles.statValue}>{stats.total}</Text>
+             <Text style={styles.statLabel}>Total</Text>
+           </View>
+           <View style={styles.statBox}>
+             <Text style={[styles.statValue, { color: '#FBC02D' }]}>{stats.pending}</Text>
+             <Text style={styles.statLabel}>Pending</Text>
+           </View>
+           <View style={styles.statBox}>
+             <Text style={[styles.statValue, { color: '#4CAF50' }]}>{stats.resolved}</Text>
+             <Text style={styles.statLabel}>Resolved</Text>
+           </View>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Fixed Emergency Button at Bottom */}
+      <View style={styles.footer}>
+        <EmergencyButton onPress={() => {}} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF9FB',
+  },
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 15,
+    backgroundColor: 'white',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logoIcon: {
+    backgroundColor: '#FF4B6C',
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
+  logoText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1A237E',
+    letterSpacing: -0.5,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 15,
+    paddingLeft: 4,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 10,
+    justifyContent: 'space-around',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  statBox: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A237E',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#9E9E9E',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  footer: {
+    position: 'absolute',
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    right: 0,
+    backgroundColor: 'rgba(250, 249, 251, 0.9)',
   },
 });

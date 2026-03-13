@@ -8,6 +8,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -20,6 +21,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const scale = useSharedValue(0.5);
   const opacity = useSharedValue(0);
 
@@ -31,13 +33,17 @@ export default function SplashScreen() {
     });
     opacity.value = withTiming(1, { duration: 1000 });
 
-    // Navigate to register after 3 seconds
+    // Navigate after 3 seconds
     const timer = setTimeout(() => {
-      router.replace('/register');
+      if (isAuthenticated) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/login');
+      }
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isAuthenticated]);
 
   const animatedLogoStyle = useAnimatedStyle(() => {
     return {

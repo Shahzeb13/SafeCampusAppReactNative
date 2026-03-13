@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useSnackbar } from '../context/SnackbarContext';
-import { API_URL } from '@/config/api';
+import { API_BASE_URL } from '@/config/api';
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandling';
 
@@ -34,7 +34,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/register`, {
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
         username,
         email,
         password,
