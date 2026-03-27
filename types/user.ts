@@ -7,4 +7,11 @@ export interface User {
   role: UserRole;
   avatar?: string;
   token?: string;
+  // University specific fields
+  rollNumber?: string;
+  universityName?: string;
+  departmentName?: string;
+  program?: string;
+  semester?: string;
+  section?: string;
 }

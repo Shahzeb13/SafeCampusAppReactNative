@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Fonts } from '@/constants/theme';
+
 import {
   StyleSheet,
   View,
@@ -46,6 +48,7 @@ export default function LoginScreen() {
         showSnackbar('Logged in successfully', 'success');
         
         // Use the context login function
+        // setting up login context  here 
         login({
           id: response.data.id || response.data.userId,
           username: response.data.username,
@@ -190,6 +193,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1A237E',
@@ -197,6 +201,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
+    fontFamily: Fonts.regular,
     fontSize: 14,
     color: '#9E9E9E',
     marginBottom: 30,
@@ -219,6 +224,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#333',
     fontSize: 16,
+    fontFamily: Fonts.regular,
   },
   button: {
     width: 250,
@@ -237,6 +243,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: Fonts.bold,
     letterSpacing: 1,
   },
   footer: {
@@ -246,10 +253,12 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#333',
     fontSize: 14,
+    fontFamily: Fonts.regular,
   },
   linkText: {
     color: '#FF3B70',
     fontSize: 14,
     fontWeight: 'bold',
+    fontFamily: Fonts.bold,
   },
 });

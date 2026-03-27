@@ -44,9 +44,9 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Custom App Bar */}
       <View style={styles.appBar}>
-        <TouchableOpacity style={styles.menuButton}>
+        {/* <TouchableOpacity style={styles.menuButton}>
           <MaterialCommunityIcons name="menu" size={28} color="#333" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
             <MaterialCommunityIcons name="shield" size={20} color="white" />
@@ -90,14 +90,14 @@ export default function HomeScreen() {
             subtitle="Rapid response"
             icon="phone-alert"
             color="#F44336"
-            onPress={() => {}}
+            onPress={() => router.push('/(tabs)/emergency')}
           />
           <GridActionCard
             title="Safety Tips"
             subtitle="Campus guide"
             icon="shield-check-outline"
             color="#4CAF50"
-            onPress={() => {}}
+            onPress={() => router.push('/(tabs)/safety')}
           />
         </View>
 
@@ -122,7 +122,7 @@ export default function HomeScreen() {
 
       {/* Fixed Emergency Button at Bottom */}
       <View style={styles.footer}>
-        <EmergencyButton onPress={() => {}} />
+        <EmergencyButton onPress={() => router.push('/(tabs)/emergency')} />
       </View>
     </View>
   );

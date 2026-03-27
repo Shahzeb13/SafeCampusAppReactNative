@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { Fonts } from '@/constants/theme';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -104,12 +105,14 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 42,
     fontWeight: 'bold',
     color: 'white',
     letterSpacing: 1,
   },
   tagline: {
+    fontFamily: Fonts.regular,
     fontSize: 16,
     color: 'white',
     marginTop: 15,

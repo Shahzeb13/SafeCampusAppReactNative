@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Fonts } from '@/constants/theme';
 import {
   StyleSheet,
   View,
@@ -22,13 +23,26 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'student' | 'staff'>('student');
+  const [rollNumber, setRollNumber] = useState('');
+  const [universityName, setUniversityName] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
+  const [program, setProgram] = useState('');
+  const [semester, setSemester] = useState('');
+  const [section, setSection] = useState('');
   const [loading, setLoading] = useState(false);
+  
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
 
   const handleRegister = async () => {
-    if (!username || !email || !password) {
-      showSnackbar('Please fill in all fields', 'error');
+    if (!username || !email || !password || !universityName || !departmentName) {
+      showSnackbar('Please fill in all required fields', 'error');
+      return;
+    }
+
+    if (role === 'student' && (!rollNumber || !program || !semester)) {
+      showSnackbar('Please fill in student details', 'error');
       return;
     }
 
@@ -38,7 +52,13 @@ export default function RegisterScreen() {
         username,
         email,
         password,
-        role: 'student',
+        role,
+        rollNumber,
+        universityName,
+        departmentName,
+        program,
+        semester,
+        section,
         avatar: null
       }, {
         timeout: 10000,
@@ -111,6 +131,88 @@ export default function RegisterScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+              />
+            </View>
+
+            {/* Role Selection */}
+            <View style={styles.roleContainer}>
+              <TouchableOpacity 
+                style={[styles.roleButton, role === 'student' && styles.activeRoleButton]}
+                onPress={() => setRole('student')}
+              >
+                <Text style={[styles.roleButtonText, role === 'student' && styles.activeRoleButtonText]}>Student</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.roleButton, role === 'staff' && styles.activeRoleButton]}
+                onPress={() => setRole('staff')}
+              >
+                <Text style={[styles.roleButtonText, role === 'staff' && styles.activeRoleButtonText]}>Staff</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* University Fields */}
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="school-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="University Name"
+                value={universityName}
+                onChangeText={setUniversityName}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="office-building-marker-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Department Name"
+                value={departmentName}
+                onChangeText={setDepartmentName}
+              />
+            </View>
+
+            {role === 'student' && (
+              <>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Roll Number"
+                    value={rollNumber}
+                    onChangeText={setRollNumber}
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons name="book-open-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Program (e.g. BSCS)"
+                    value={program}
+                    onChangeText={setProgram}
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons name="numeric" size={24} color="#FF3B70" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Semester"
+                    value={semester}
+                    onChangeText={setSemester}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </>
+            )}
+
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="group" size={24} color="#FF3B70" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Section (Optional)"
+                value={section}
+                onChangeText={setSection}
               />
             </View>
 
@@ -192,6 +294,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1A237E',
@@ -199,6 +302,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
+    fontFamily: Fonts.regular,
     fontSize: 14,
     color: '#9E9E9E',
     marginBottom: 30,
@@ -221,6 +325,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#333',
     fontSize: 16,
+    fontFamily: Fonts.regular,
   },
   button: {
     width: 250,
@@ -239,6 +344,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: Fonts.bold,
   },
   footer: {
     flexDirection: 'row',
@@ -247,10 +353,41 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#333',
     fontSize: 14,
+    fontFamily: Fonts.regular,
   },
   linkText: {
     color: '#FF3B70',
     fontSize: 14,
     fontWeight: 'bold',
+    fontFamily: Fonts.bold,
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
+    gap: 10,
+  },
+  roleButton: {
+    flex: 1,
+    height: 45,
+    borderRadius: 12,
+    backgroundColor: '#F7F7F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  activeRoleButton: {
+    backgroundColor: '#FF3B70',
+    borderColor: '#FF3B70',
+  },
+  roleButtonText: {
+    color: '#666',
+    fontWeight: '600',
+    fontFamily: Fonts.medium,
+  },
+  activeRoleButtonText: {
+    color: 'white',
   },
 });
