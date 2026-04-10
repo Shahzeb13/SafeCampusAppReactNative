@@ -9,16 +9,25 @@ export const setAuthToken = (token: string | null) => {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 120000,
 });
 
 api.interceptors.request.use(
   (config) => {
+    // 1. Authenticate the request
     if (authToken) {
       config.headers.Authorization = `Bearer ${authToken}`;
-      // Also send in cookies if the backend specifically looks for it
-      // though typically for mobile we use Headers.
     }
+
+    // 2. Fix: For multipart/FormData, we MUST NOT have a hardcoded Content-Type 
+    // especially for urleconded fallback bugs. 
+    // React Native FormData has a '_parts' property.
+    // if (config.data && (config.data instanceof FormData || config.data._parts)) {
+    //   // Deleting it lets Axios (and the browser/native layer) 
+    //   // automatically generate the correct boundary string.
+    //   delete config.headers['Content-Type'];
+    // }
+
     return config;
   },
   (error) => {

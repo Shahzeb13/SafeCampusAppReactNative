@@ -2,12 +2,23 @@ import axios from 'axios';
 
 export const handleApiError = (error: any, showSnackbar: (message: string, type: 'success' | 'error' | 'info') => void) => {
   if (axios.isAxiosError(error)) {
+
+     console.log("AXIOS FULL ERROR:", error);
+    console.log("AXIOS MESSAGE:", error.message);
+    console.log("AXIOS CODE:", error.code);
+    console.log("AXIOS CONFIG:", error.config);
+    console.log("AXIOS RESPONSE:", error.response);
+    console.log("AXIOS REQUEST:", error.request);
     if (error.response) {
+
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
       const message = error.response.data?.message || 'Server responded with an error';
       showSnackbar(message, 'error');
       console.log('Axios Response Error:', error.response.data);
+    } else if (error.code === 'ECONNABORTED' || error.message.toLowerCase().includes('timeout')) {
+      showSnackbar('Request timed out. Please try again with a smaller file or better connection.', 'error');
+      console.log('Axios Timeout Error:', error.message);
     } else if (error.request) {
       // The request was made but no response was received
       // `error.request` is an instance of XMLHttpRequest in the browser and an instance of

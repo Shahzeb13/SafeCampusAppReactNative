@@ -3,4 +3,6 @@ export type IncidentMedia = {
   type: 'image' | 'video';
   fileName?: string;
   mimeType?: string;
+  fileSize?: number;
+  duration?: number;
 };

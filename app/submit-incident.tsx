@@ -9,7 +9,8 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Modal
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,11 +23,13 @@ import VoiceRecorder from '@/components/VoiceRecorder';
 import VoicePlayer from '@/components/voicePlayer';
 import { VoiceNote } from '@/types/voiceNote';
 import { IncidentMedia } from '@/types/incidentMedia';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { handleApiError } from '../utils/errorHandling';
+
 
 import MediaPreview from '@/components/MediaPreview';
 import MediaPicker from '@/components/MediaPicker';
-
-
+import CameraCapture from '@/components/CameraCapture';
 
 const INCIDENT_TYPES: { label: string; value: IncidentType }[] = [
   { label: 'Theft', value: 'theft' },
@@ -42,9 +45,6 @@ const INCIDENT_TYPES: { label: string; value: IncidentType }[] = [
   { label: 'Other', value: 'other' },
 ];
 
-
-
-
 export default function SubmitIncidentScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -55,7 +55,8 @@ export default function SubmitIncidentScreen() {
   const [loading, setLoading] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const [voiceNote, setVoiceNote] = useState<VoiceNote | null>(null);
-  const [media, setMedia] = useState<IncidentMedia | null>(null);
+  const [mediaList, setMediaList] = useState<IncidentMedia[]>([]);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const [region, setRegion] = useState<Region>({
     latitude: 33.6844, // Default Islamabad
@@ -64,8 +65,79 @@ export default function SubmitIncidentScreen() {
     longitudeDelta: 0.01,
   });
 
+  // Persistent Form State
+  React.useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const draft = await AsyncStorage.getItem('incident_draft');
+        if (draft) {
+          const { title, description, incidentType, locationText, latitude, longitude } = JSON.parse(draft);
+          if (title) setTitle(title);
+          if (description) setDescription(description);
+          if (incidentType) setIncidentType(incidentType);
+          if (locationText) setLocationText(locationText);
+          if (latitude) setLatitude(latitude);
+          if (longitude) setLongitude(longitude);
+        }
+      } catch (e) {
+        console.error('Failed to load draft from storage');
+      }
+    };
+    loadDraft();
+  }, []);
+
+  React.useEffect(() => {
+    const saveDraft = async () => {
+      try {
+        const draft = { title, description, incidentType, locationText, latitude, longitude };
+        await AsyncStorage.setItem('incident_draft', JSON.stringify(draft));
+      } catch (e) {
+        console.error('Failed to save draft to storage');
+      }
+    };
+    saveDraft();
+  }, [title, description, incidentType, locationText, latitude, longitude]);
+
+  const clearDraft = async () => {
+    try {
+      await AsyncStorage.removeItem('incident_draft');
+    } catch (e) {
+      console.error('Failed to clear draft');
+    }
+  };
+
+
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
+
+ 
+  const handleCloseCamera = () => setIsCameraOpen(false);
+ const handleOpenCamera = () => setIsCameraOpen(true);
+
+  const handleMediaAdd = (newMedia: IncidentMedia) => {
+    if (newMedia.type === 'video') {
+      // Replace existing video if any, or just add if none
+      setMediaList(prev => {
+        const filtered = prev.filter(m => m.type !== 'video');
+        return [...filtered, newMedia];
+      });
+    } else {
+      // Add image if under limit
+      setMediaList(prev => {
+        const imageCount = prev.filter(m => m.type === 'image').length;
+        if (imageCount >= 3) {
+          showSnackbar('Maximum 3 images allowed', 'error');
+          return prev;
+        }
+        return [...prev, newMedia];
+      });
+    }
+    setIsCameraOpen(false);
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setMediaList(prev => prev.filter((_, i) => i !== index));
+  };
 
   const getCurrentLocation = async () => {
     setLocLoading(true);
@@ -127,41 +199,62 @@ export default function SubmitIncidentScreen() {
     try {
       // Prepare FormData for backend integration
       const formData = new FormData();
+      
+      // Append text fields
       formData.append('title', title);
       formData.append('description', description);
       formData.append('incidentType', incidentType);
       formData.append('locationText', locationText);
 
-      if (latitude !== undefined) formData.append('latitude', latitude.toString());
-      if (longitude !== undefined) formData.append('longitude', longitude.toString());
+      // Append numeric values as strings (FormData expects strings)
+      if (latitude !== undefined) formData.append('latitude', String(latitude));
+      if (longitude !== undefined) formData.append('longitude', String(longitude));
 
-      // Append voice note if it exists
+      // Append audio (voice note) if it exists
       if (voiceNote) {
-        // Extract filename from URI or provide a default
-        const fileName = voiceNote.uri.split('/').pop() || 'voiceNote.m4a';
-
-        formData.append('voiceNote', {
+        formData.append('audio', {
           uri: voiceNote.uri,
-          name: fileName,
-          type: 'audio/m4a', // Defaulting to m4a as it's common for Expo
+          name: voiceNote.uri.split('/').pop() || 'voice_note.m4a',
+          type: 'audio/m4a',
         } as any);
 
-        formData.append('voiceDuration', voiceNote.durationMs.toString());
+        formData.append('voiceDuration', String(voiceNote.durationMs));
       }
 
-      // Note: Passing formData to createIncident. 
-      // The current service expects CreateIncidentBody object, 
-      // but we are preparing it for FormData as requested.
+      // Append multiple images using the 'images' key
+      mediaList
+        .filter(item => item.type === 'image')
+        .forEach((image, index) => {
+          formData.append('images', {
+            uri: image.uri,
+            name: image.fileName || `image_${Date.now()}_${index}.jpg`,
+            type: 'image/jpeg',
+          } as any);
+        });
+
+      // Append single video using the 'video' key
+      const videoMedia = mediaList.find(item => item.type === 'video');
+      if (videoMedia) {
+        formData.append('video', {
+          uri: videoMedia.uri,
+          name: videoMedia.fileName || `video_${Date.now()}.mp4`,
+          type: 'video/mp4',
+        } as any);
+      }
+
+      // Submit to service (axios automatically handles Content-Type for FormData)
       await incidentService.createIncident(formData as any);
 
+      await clearDraft(); // Clear draft on successful submission
       showSnackbar('Incident reported successfully', 'success');
       router.back();
     } catch (error: any) {
-      showSnackbar(error.response?.data?.message || 'Failed to report incident', 'error');
+      handleApiError(error, showSnackbar);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -178,89 +271,143 @@ export default function SubmitIncidentScreen() {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Brief title of the incident"
-            value={title}
-            onChangeText={setTitle}
-          />
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="information-outline" size={20} color="#1A237E" />
+              <Text style={styles.sectionTitle}>Incident Details</Text>
+            </View>
+            
+            <Text style={styles.label}>Title</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Brief title of the incident"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-          <Text style={styles.label}>Incident Type</Text>
-          <View style={styles.typeContainer}>
-            {INCIDENT_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type.value}
-                style={[
-                  styles.typeChip,
-                  incidentType === type.value && styles.selectedChip
-                ]}
-                onPress={() => setIncidentType(type.value)}
+            <Text style={styles.label}>Incident Type</Text>
+            <View style={styles.typeContainer}>
+              {INCIDENT_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type.value}
+                  style={[
+                    styles.typeChip,
+                    incidentType === type.value && styles.selectedChip
+                  ]}
+                  onPress={() => setIncidentType(type.value)}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    incidentType === type.value && styles.selectedChipText
+                  ]}>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="map-marker-radius-outline" size={20} color="#1A237E" />
+              <Text style={styles.sectionTitle}>Location Information</Text>
+            </View>
+
+            <View style={styles.mapWrapper}>
+              <MapView
+                style={styles.map}
+                region={region}
+                onPress={handleMapPress}
+                showsUserLocation
               >
-                <Text style={[
-                  styles.chipText,
-                  incidentType === type.value && styles.selectedChipText
-                ]}>
-                  {type.label}
-                </Text>
+                {(latitude && longitude) && (
+                  <Marker coordinate={{ latitude, longitude }} />
+                )}
+              </MapView>
+
+              <TouchableOpacity
+                style={styles.locationButton}
+                onPress={getCurrentLocation}
+                disabled={locLoading}
+              >
+                {locLoading ? (
+                  <ActivityIndicator color="#1A237E" size="small" />
+                ) : (
+                  <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#1A237E" />
+                )}
+                <Text style={styles.locationButtonText}>Detect Location</Text>
               </TouchableOpacity>
-            ))}
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Near Library, Main Entrance"
+              value={locationText}
+              onChangeText={setLocationText}
+            />
           </View>
 
-          <Text style={styles.label}>Location</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="paperclip" size={20} color="#1A237E" />
+              <Text style={styles.sectionTitle}>EVIDENCE & RECORDINGS</Text>
+            </View>
 
-          <View style={styles.mapWrapper}>
-            <MapView
-              style={styles.map}
-              region={region}
-              onPress={handleMapPress}
-              showsUserLocation
-            >
-              {(latitude && longitude) && (
-                <Marker coordinate={{ latitude, longitude }} />
-              )}
-            </MapView>
+            {/* Voice Recording Section */}
+            <VoiceRecorder setVoiceNote={setVoiceNote} />
+            {voiceNote && <VoicePlayer voiceNote={voiceNote} setVoiceNote={setVoiceNote} />}
 
-            <TouchableOpacity
-              style={styles.locationButton}
-              onPress={getCurrentLocation}
-              disabled={locLoading}
-            >
-              {locLoading ? (
-                <ActivityIndicator color="#1A237E" size="small" />
-              ) : (
-                <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#1A237E" />
-              )}
-              <Text style={styles.locationButtonText}>Get Location</Text>
-            </TouchableOpacity>
+            <View style={styles.divider} />
+
+            {/* Visual Media Section */}
+            <MediaPicker 
+              onPickMedia={handleMediaAdd} 
+              onOpenCamera={handleOpenCamera} 
+            />
+
+            {mediaList.length > 0 ? (
+              <View style={styles.mediaListContainer}>
+                <Text style={styles.selectedCountText}>
+                  {mediaList.length} attachment{mediaList.length > 1 ? 's' : ''} selected
+                </Text>
+                {mediaList.map((item, index) => (
+                  <MediaPreview 
+                    key={index} 
+                    media={item} 
+                    onRemove={() => handleRemoveMedia(index)} 
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyMediaBox}>
+                <MaterialCommunityIcons name="image-off-outline" size={24} color="#BDBDBD" />
+                <Text style={styles.emptyMediaText}>No images or video attached yet</Text>
+              </View>
+            )}
           </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Where did it happen? (e.g. Library 2nd Floor)"
-            value={locationText}
-            onChangeText={setLocationText}
-          />
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="text-box-outline" size={20} color="#1A237E" />
+              <Text style={styles.sectionTitle}>Narrative</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Provide more specific details about the event..."
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
 
-          <VoiceRecorder setVoiceNote={setVoiceNote} />
-
-          {voiceNote && <VoicePlayer voiceNote={voiceNote} setVoiceNote={setVoiceNote} />}
-
-
-          <MediaPicker setMedia={setMedia} />
-
-          {media && <MediaPreview media={media} setMedia={setMedia} />}
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Provide details about what happened..."
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-
+          <Modal visible={isCameraOpen} animationType="slide">
+            <CameraCapture 
+              onCapture={handleMediaAdd} 
+              onClose={handleCloseCamera} 
+            />
+          </Modal>
 
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.disabledButton]}
@@ -300,7 +447,65 @@ const styles = StyleSheet.create({
     color: '#1A237E',
   },
   form: {
-    gap: 15,
+    gap: 20,
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1A237E',
+    letterSpacing: 0.5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 16,
+    width: '100%',
+  },
+  mediaListContainer: {
+    marginTop: 20,
+    gap: 12,
+  },
+  selectedCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#757575',
+    marginBottom: 4,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
+  emptyMediaBox: {
+    marginTop: 10,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  emptyMediaText: {
+    fontSize: 13,
+    color: '#9E9E9E',
+    fontWeight: '600',
   },
   label: {
     fontSize: 14,

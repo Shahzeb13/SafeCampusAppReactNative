@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { Accelerometer } from 'expo-sensors';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,6 +10,7 @@ import { StatusCard } from '../../components/StatusCard';
 import { LiveMapCard } from '../../components/LiveMapCard';
 import { GridActionCard } from '../../components/GridActionCard';
 import { EmergencyButton } from '../../components/EmergencyButton';
+import { SOSModal } from '../../components/SOSModal';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -15,6 +18,8 @@ export default function HomeScreen() {
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sosVisible, setSosVisible] = useState(false);
+  const [isShakeTriggered, setIsShakeTriggered] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -40,13 +45,56 @@ export default function HomeScreen() {
     fetchStats();
   };
 
+  useEffect(() => {
+    let subscription: any;
+    
+    const startShakeDetection = async () => {
+      // Adjusted threshold for easier testing (1.0 = gravity)
+      const SHAKE_THRESHOLD = 2.5; 
+      let lastUpdate = 0;
+
+      subscription = Accelerometer.addListener(accelerometerData => {
+        const { x, y, z } = accelerometerData;
+        const acceleration = Math.sqrt(x * x + y * y + z * z);
+        const currTime = Date.now();
+
+        // Log for debugging (remove in production)
+        if (acceleration > 1.2) {
+          console.log(`Shake detected! Force: ${acceleration.toFixed(2)}`);
+        }
+
+        if (acceleration > SHAKE_THRESHOLD && (currTime - lastUpdate) > 2000) {
+          console.log("🔥 VIOLENT SHAKE DETECTED! Triggering SOS...");
+          lastUpdate = currTime;
+          handleShakeSOS();
+        }
+      });
+
+      Accelerometer.setUpdateInterval(100);
+    };
+
+    const handleShakeSOS = () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setIsShakeTriggered(true);
+      setSosVisible(true);
+    };
+
+    startShakeDetection();
+
+    return () => {
+      if (subscription) subscription.remove();
+    };
+  }, []);
+
+  const handleCloseSOS = () => {
+    setSosVisible(false);
+    setIsShakeTriggered(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Custom App Bar */}
       <View style={styles.appBar}>
-        {/* <TouchableOpacity style={styles.menuButton}>
-          <MaterialCommunityIcons name="menu" size={28} color="#333" />
-        </TouchableOpacity> */}
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
             <MaterialCommunityIcons name="shield" size={20} color="white" />
@@ -120,9 +168,15 @@ export default function HomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      <SOSModal 
+        visible={sosVisible} 
+        onClose={handleCloseSOS} 
+        autoTrigger={isShakeTriggered} 
+      />
+
       {/* Fixed Emergency Button at Bottom */}
       <View style={styles.footer}>
-        <EmergencyButton onPress={() => router.push('/(tabs)/emergency')} />
+        <EmergencyButton onPress={() => setSosVisible(true)} />
       </View>
     </View>
   );
@@ -141,11 +195,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15,
     backgroundColor: 'white',
-  },
-  menuButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
   },
   logoContainer: {
     flexDirection: 'row',

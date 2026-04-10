@@ -3,7 +3,13 @@ import { Incident, CreateIncidentBody } from '../types/incident';
 
 export const incidentService = {
   createIncident: async (incidentData: CreateIncidentBody): Promise<Incident> => {
-    const response = await api.post('/incidents', incidentData);
+    console.log("Incident Form data " , incidentData)
+    const response = await api.post('/incidents/uploadIncident', incidentData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 300000, // 5 minutes for large media uploads
+    });
     return response.data;
   },
 

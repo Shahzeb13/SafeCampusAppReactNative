@@ -8,6 +8,7 @@ import {
   Animated, 
   Easing 
 } from 'react-native';
+import { File } from 'expo-file-system';
 import {
   AudioModule,
   RecordingPresets,
@@ -28,6 +29,7 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
   const recorderState = useAudioRecorderState(recorder);
   
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const setup = async () => {
@@ -46,24 +48,43 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
 
   useEffect(() => {
     if (recorderState.isRecording) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.2,
-            duration: 800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      Animated.parallel([
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(pulseAnim, {
+              toValue: 1.15,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(glowAnim, {
+              toValue: 0.6,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0.2,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      ]).start();
     } else {
       pulseAnim.setValue(1);
+      glowAnim.setValue(0);
     }
   }, [recorderState.isRecording]);
 
@@ -82,9 +103,11 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await recorder.stop();
       if (recorder.uri) {
+        const file = new File(recorder.uri);
         setVoiceNote({
           uri: recorder.uri,
           durationMs: recorderState.durationMillis,
+          fileSize: file.exists ? file.size : undefined,
         });
       }
     } catch (error) {
@@ -101,46 +124,56 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Audio Description</Text>
+      <View style={styles.headerRow}>
+        <MaterialCommunityIcons name="microphone-outline" size={20} color="#1A237E" />
+        <Text style={styles.sectionTitle}>Audio Description</Text>
+      </View>
       
-      <View style={styles.card}>
-        <View style={styles.infoArea}>
-          <Text style={styles.statusText}>
-            {recorderState.isRecording ? 'RECORDING' : 'Tap to start recording'}
-          </Text>
-          {recorderState.isRecording && (
-            <Text style={styles.timerText}>{formatDuration(recorderState.durationMillis)}</Text>
+      <View style={[styles.card, recorderState.isRecording && styles.cardActive]}>
+        <View style={styles.content}>
+          <View style={styles.textContainer}>
+            <Text style={[styles.statusText, recorderState.isRecording && styles.statusTextActive]}>
+              {recorderState.isRecording ? 'Capturing your voice...' : 'Record a voice description'}
+            </Text>
+            {recorderState.isRecording && (
+              <View style={styles.timerContainer}>
+                <View style={styles.redDot} />
+                <Text style={styles.timerText}>{formatDuration(recorderState.durationMillis)}</Text>
+              </View>
+            )}
+          </View>
+
+          {!recorderState.isRecording ? (
+            <Pressable
+              onPress={startRecording}
+              style={({ pressed }) => [
+                styles.mainButton,
+                pressed && styles.buttonPressed
+              ]}
+            >
+              <MaterialCommunityIcons name="microphone" size={28} color="white" />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={stopRecording}
+              style={({ pressed }) => [
+                styles.mainButtonActive,
+                pressed && styles.buttonPressed
+              ]}
+            >
+              <Animated.View style={[
+                styles.glowLayer,
+                { opacity: glowAnim, transform: [{ scale: pulseAnim }] }
+              ]} />
+              <Animated.View style={[
+                styles.iconContainerActive,
+                { transform: [{ scale: pulseAnim }] }
+              ]}>
+                <MaterialCommunityIcons name="stop" size={28} color="white" />
+              </Animated.View>
+            </Pressable>
           )}
         </View>
-
-        {!recorderState.isRecording ? (
-          <Pressable
-            onPress={startRecording}
-            style={({ pressed }) => [
-              styles.recordButton,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="microphone" size={32} color="white" />
-            </View>
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={stopRecording}
-            style={({ pressed }) => [
-              styles.stopButton,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <Animated.View style={[
-              styles.iconContainerActive,
-              { transform: [{ scale: pulseAnim }] }
-            ]}>
-              <MaterialCommunityIcons name="stop" size={32} color="white" />
-            </Animated.View>
-          </Pressable>
-        )}
       </View>
     </View>
   );
@@ -148,72 +181,111 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#424242',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#1A237E',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   card: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardActive: {
+    borderColor: '#FF3B7020',
+    backgroundColor: '#FFF8F9',
+  },
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
   },
-  infoArea: {
+  textContainer: {
     flex: 1,
   },
   statusText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6C757D',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#616161',
+  },
+  statusTextActive: {
+    color: '#FF3B70',
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  redDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF3B70',
   },
   timerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF3B70',
-    marginTop: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#212121',
+    letterSpacing: 1,
   },
-  recordButton: {
-    marginLeft: 15,
-  },
-  stopButton: {
-    marginLeft: 15,
-  },
-  buttonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.95 }],
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
+  mainButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#1A237E',
-    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1A237E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  mainButtonActive: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconContainerActive: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     backgroundColor: '#FF3B70',
-    borderRadius: 32,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF3B70',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 5,
+    zIndex: 2,
   },
-});
+  glowLayer: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FF3B70',
+    zIndex: 1,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.9,
+  },
+});

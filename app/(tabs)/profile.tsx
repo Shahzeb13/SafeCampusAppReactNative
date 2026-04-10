@@ -2,9 +2,32 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { testService } from '../../services/testService';
+import { useSnackbar } from '../../context/SnackbarContext';
+import { handleApiError } from '../../utils/errorHandling';
+import { ActivityIndicator } from 'react-native';
+
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const router = useRouter();
+  const { showSnackbar } = useSnackbar();
+  const [testing, setTesting] = useState(false);
+
+  const handleTestServer = async () => {
+    setTesting(true);
+    try {
+      const result = await testService.checkServer();
+      showSnackbar(result.message || 'Server is active!', 'success');
+    } catch (error: any) {
+      handleApiError(error, showSnackbar);
+    } finally {
+      setTesting(false);
+    }
+  };
+
 
   return (
     <View style={styles.container}>
@@ -38,7 +61,35 @@ export default function ProfileScreen() {
           <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
         </TouchableOpacity>
 
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/sos-history' as any)}
+        >
+          <MaterialCommunityIcons name="history" size={24} color="#FF3B30" />
+          <Text style={styles.menuText}>SOS Alerts History</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={handleTestServer}
+          disabled={testing}
+        >
+          <MaterialCommunityIcons 
+            name={testing ? "loading" : "server-network"} 
+            size={24} 
+            color={testing ? "#BDBDBD" : "#1A237E"} 
+          />
+          <Text style={styles.menuText}>Test Server Connection</Text>
+          {testing ? (
+            <ActivityIndicator size="small" color="#1A237E" />
+          ) : (
+            <MaterialCommunityIcons name="broadcast" size={20} color="#4CAF50" />
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
+
           <MaterialCommunityIcons name="logout" size={24} color="#F44336" />
           <Text style={[styles.menuText, { color: '#F44336' }]}>Logout</Text>
         </TouchableOpacity>
