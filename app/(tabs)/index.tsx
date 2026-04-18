@@ -11,6 +11,8 @@ import { LiveMapCard } from '../../components/LiveMapCard';
 import { GridActionCard } from '../../components/GridActionCard';
 import { EmergencyButton } from '../../components/EmergencyButton';
 import { SOSModal } from '../../components/SOSModal';
+import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -20,6 +22,9 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sosVisible, setSosVisible] = useState(false);
   const [isShakeTriggered, setIsShakeTriggered] = useState(false);
+  const [showMap, setShowMap] = useState(true);
+  const [isServerConnected, setIsServerConnected] = useState(false);
+  const [monitoringActive, setMonitoringActive] = useState(true);
 
   const fetchStats = async () => {
     try {
@@ -43,7 +48,28 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchStats();
+    checkConnection();
   };
+
+  const checkConnection = async () => {
+    try {
+      await axios.get(`${API_URL}/sos/active`, { timeout: 3000 });
+      setIsServerConnected(true);
+    } catch (err) {
+      setIsServerConnected(false);
+    }
+  };
+
+  useEffect(() => {
+    let interval: any;
+    if (monitoringActive) {
+      checkConnection();
+      interval = setInterval(checkConnection, 10000);
+    } else {
+      setIsServerConnected(false);
+    }
+    return () => clearInterval(interval);
+  }, [monitoringActive]);
 
   useEffect(() => {
     let subscription: any;
@@ -101,9 +127,13 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.logoText}>SafeCampus</Text>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.profileButton}>
-          <MaterialCommunityIcons name="logout" size={24} color="#FF3B70" />
-        </TouchableOpacity>
+        <View style={styles.appBarRight}>
+          <View style={[styles.connectionDot, { backgroundColor: isServerConnected ? '#4CAF50' : '#F44336' }]} />
+          <Text style={styles.connectionText}>{isServerConnected ? 'Connected' : 'Offline'}</Text>
+          <TouchableOpacity onPress={logout} style={styles.profileButton}>
+            <MaterialCommunityIcons name="logout" size={24} color="#FF3B70" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
@@ -113,9 +143,29 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF3B70']} />
         }
       >
-        <StatusCard />
+        <StatusCard 
+          isEnabled={monitoringActive} 
+          onToggle={() => setMonitoringActive(!monitoringActive)} 
+        />
         
-        <LiveMapCard />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Safety Overview</Text>
+          <TouchableOpacity 
+            style={styles.mapToggleButton} 
+            onPress={() => setShowMap(!showMap)}
+          >
+            <MaterialCommunityIcons 
+              name={showMap ? "map-check" : "map-outline"} 
+              size={20} 
+              color={showMap ? "#FF3B70" : "#666"} 
+            />
+            <Text style={[styles.mapToggleText, showMap && { color: "#FF3B70" }]}>
+              {showMap ? 'Hide Map' : 'Show Map'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {showMap && <LiveMapCard />}
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.grid}>
@@ -270,5 +320,42 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(250, 249, 251, 0.9)',
+  },
+  appBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  connectionText: {
+    fontSize: 11,
+    color: '#666',
+    fontFamily: 'Inter_500Medium',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 5,
+  },
+  mapToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    elevation: 1,
+  },
+  mapToggleText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#666',
   },
 });

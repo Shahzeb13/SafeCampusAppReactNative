@@ -2,22 +2,36 @@ import React from 'react';
 import { View, Text, StyleSheet, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export const StatusCard = () => {
+interface StatusCardProps {
+  isEnabled: boolean;
+  onToggle: () => void;
+}
+
+export const StatusCard: React.FC<StatusCardProps> = ({ isEnabled, onToggle }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, !isEnabled && styles.containerDisabled]}>
       <View style={styles.leftContent}>
         <View style={styles.statusRow}>
-          <View style={styles.dot} />
-          <Text style={styles.title}>Connected to Emergency Server</Text>
+          <View style={[styles.dot, !isEnabled && styles.dotDisabled]} />
+          <Text style={[styles.title, !isEnabled && styles.titleDisabled]}>
+            {isEnabled ? 'Connected to Emergency Server' : 'Monitoring Paused'}
+          </Text>
         </View>
-        <Text style={styles.subtitle}>All systems operational</Text>
+        <Text style={[styles.subtitle, !isEnabled && styles.subtitleDisabled]}>
+          {isEnabled ? 'All systems operational' : 'Private mode active'}
+        </Text>
       </View>
       <View style={styles.rightContent}>
         <View style={styles.checkBadge}>
-          <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
+          <MaterialCommunityIcons 
+            name={isEnabled ? "check-circle" : "shield-off"} 
+            size={20} 
+            color={isEnabled ? "#4CAF50" : "#757575"} 
+          />
         </View>
         <Switch 
-          value={true} 
+          value={isEnabled} 
+          onValueChange={onToggle}
           trackColor={{ false: "#767577", true: "#673AB7" }}
           thumbColor="#fff"
         />
@@ -53,15 +67,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     marginRight: 8,
   },
-  title: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+  containerDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
   },
-  subtitle: {
-    fontSize: 13,
-    color: '#4CAF50',
-    marginLeft: 16,
+  dotDisabled: {
+    backgroundColor: '#9E9E9E',
+  },
+  titleDisabled: {
+    color: '#616161',
+  },
+  subtitleDisabled: {
+    color: '#9E9E9E',
   },
   rightContent: {
     flexDirection: 'row',
