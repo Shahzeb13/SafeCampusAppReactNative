@@ -8,13 +8,16 @@ import { useRouter } from 'expo-router';
 import { incidentService } from '../../services/incidentService';
 import { StatusCard } from '../../components/StatusCard';
 import { LiveMapCard } from '../../components/LiveMapCard';
+import  MapLive  from '../../components/Map';
 import { GridActionCard } from '../../components/GridActionCard';
 import { EmergencyButton } from '../../components/EmergencyButton';
 import { SOSModal } from '../../components/SOSModal';
 import axios from 'axios';
-import { API_URL } from '../../config/api';
+import { API_BASE_URL } from '../../config/api';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
-export default function HomeScreen() {
+function HomeScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
@@ -22,7 +25,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sosVisible, setSosVisible] = useState(false);
   const [isShakeTriggered, setIsShakeTriggered] = useState(false);
-  const [showMap, setShowMap] = useState(true);
+  const [showMap, setShowMap] = useState<boolean>(true);
   const [isServerConnected, setIsServerConnected] = useState(false);
   const [monitoringActive, setMonitoringActive] = useState(true);
 
@@ -53,7 +56,7 @@ export default function HomeScreen() {
 
   const checkConnection = async () => {
     try {
-      await axios.get(`${API_URL}/sos/active`, { timeout: 3000 });
+      await axios.get(`${API_BASE_URL}/sos/active`, { timeout: 3000 });
       setIsServerConnected(true);
     } catch (err) {
       setIsServerConnected(false);
@@ -75,8 +78,8 @@ export default function HomeScreen() {
     let subscription: any;
     
     const startShakeDetection = async () => {
-      // Adjusted threshold for easier testing (1.0 = gravity)
-      const SHAKE_THRESHOLD = 2.5; 
+      // High threshold for safety (8.0+ is a very violent shake)
+      const SHAKE_THRESHOLD = 8.0; 
       let lastUpdate = 0;
 
       subscription = Accelerometer.addListener(accelerometerData => {
@@ -117,57 +120,40 @@ export default function HomeScreen() {
     setIsShakeTriggered(false);
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Custom App Bar */}
-      <View style={styles.appBar}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoIcon}>
-            <MaterialCommunityIcons name="shield" size={20} color="white" />
-          </View>
-          <Text style={styles.logoText}>SafeCampus</Text>
-        </View>
-        <View style={styles.appBarRight}>
-          <View style={[styles.connectionDot, { backgroundColor: isServerConnected ? '#4CAF50' : '#F44336' }]} />
-          <Text style={styles.connectionText}>{isServerConnected ? 'Connected' : 'Offline'}</Text>
-          <TouchableOpacity onPress={logout} style={styles.profileButton}>
-            <MaterialCommunityIcons name="logout" size={24} color="#FF3B70" />
-          </TouchableOpacity>
-        </View>
-      </View>
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
+  return (
+    <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#FAF9FB' }]}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF3B70']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF3B70']} tintColor="#FF3B70" />
         }
       >
-        <StatusCard 
-          isEnabled={monitoringActive} 
-          onToggle={() => setMonitoringActive(!monitoringActive)} 
-        />
+        <StatusCard />
         
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Safety Overview</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Safety Overview</Text>
           <TouchableOpacity 
-            style={styles.mapToggleButton} 
+            style={[styles.mapToggleButton, { backgroundColor: theme.background }]} 
             onPress={() => setShowMap(!showMap)}
           >
             <MaterialCommunityIcons 
               name={showMap ? "map-check" : "map-outline"} 
               size={20} 
-              color={showMap ? "#FF3B70" : "#666"} 
+              color={showMap ? "#FF3B70" : theme.icon} 
             />
-            <Text style={[styles.mapToggleText, showMap && { color: "#FF3B70" }]}>
+            <Text style={[styles.mapToggleText, { color: theme.icon }, showMap && { color: "#FF3B70" }]}>
               {showMap ? 'Hide Map' : 'Show Map'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {showMap && <LiveMapCard />}
+        {showMap && <MapLive mapStyle={'https://tiles.openfreemap.org/styles/liberty'} />}
 
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
         <View style={styles.grid}>
           <GridActionCard
             title="Report"
@@ -184,8 +170,8 @@ export default function HomeScreen() {
             onPress={() => router.push('/my-incidents')}
           />
           <GridActionCard
-            title="Emergency"
-            subtitle="Rapid response"
+            title="Emergency Contacts"
+            subtitle="Close People"
             icon="phone-alert"
             color="#F44336"
             onPress={() => router.push('/(tabs)/emergency')}
@@ -200,18 +186,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Stats Section */}
-        <View style={styles.statsContainer}>
+        <View style={[styles.statsContainer, { backgroundColor: theme.background }]}>
            <View style={styles.statBox}>
-             <Text style={styles.statValue}>{stats.total}</Text>
-             <Text style={styles.statLabel}>Total</Text>
+             <Text style={[styles.statValue, { color: colorScheme === 'dark' ? '#FFF' : '#1A237E' }]}>{stats.total}</Text>
+             <Text style={[styles.statLabel, { color: theme.icon }]}>Total</Text>
            </View>
            <View style={styles.statBox}>
              <Text style={[styles.statValue, { color: '#FBC02D' }]}>{stats.pending}</Text>
-             <Text style={styles.statLabel}>Pending</Text>
+             <Text style={[styles.statLabel, { color: theme.icon }]}>Pending</Text>
            </View>
            <View style={styles.statBox}>
              <Text style={[styles.statValue, { color: '#4CAF50' }]}>{stats.resolved}</Text>
-             <Text style={styles.statLabel}>Resolved</Text>
+             <Text style={[styles.statLabel, { color: theme.icon }]}>Resolved</Text>
            </View>
         </View>
 
@@ -225,13 +211,15 @@ export default function HomeScreen() {
       />
 
       {/* Fixed Emergency Button at Bottom */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(250, 249, 251, 0.9)' }]}>
         <EmergencyButton onPress={() => setSosVisible(true)} />
       </View>
     </View>
   );
 }
 
+
+export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,

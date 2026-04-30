@@ -1,2 +1,3 @@
-export const API_BASE_URL = 'http://192.168.1.10:4000/api';
-export const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your real key
+export const API_BASE_URL = 'http://192.168.1.16:4000/api';
+
+// All maps now use free OpenStreetMap with no API key required

@@ -14,7 +14,7 @@ export const incidentService = {
   },
 
   getMyIncidents: async (): Promise<Incident[]> => {
-    const response = await api.get('/incidents/my');
+    const response = await api.get('/incidents/myIncidents');
     return response.data;
   },
 

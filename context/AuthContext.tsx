@@ -4,12 +4,15 @@ import { setAuthToken } from '../services/api';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import FcmService from '../services/fcmService';
+import { useSnackbar } from './SnackbarContext';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (userData: User, token: string) => void;
   logout: () => void;
+  updateUser: (userData: User) => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -20,9 +23,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     loadStoredAuth();
+    
+    // Set up stylish foreground notification listener
+    FcmService.onMessage((remoteMessage) => {
+      if (remoteMessage.notification) {
+        showSnackbar(
+          remoteMessage.notification.body || remoteMessage.notification.title || "New update received", 
+          'info'
+        );
+      }
+    });
   }, []);
 
   const loadStoredAuth = async () => {
@@ -33,6 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
         setAuthToken(storedToken);
+        
+        // Init FCM
+        const userObj = JSON.parse(storedUser);
+        if (userObj.id) {
+          FcmService.init(userObj.id);
+        }
       }
     } catch (error) {
       console.error('Failed to load auth state', error);
@@ -48,6 +68,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AsyncStorage.setItem('userToken', authToken);
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      
+      // Init FCM
+      if (userData.id) {
+        console.log("🏁 AuthContext: Triggering FCM Init for", userData.username);
+        FcmService.init(userData.id);
+      } else {
+        console.warn("🏁 AuthContext: Skipping FCM Init - No User ID found");
+      }
     } catch (error) {
       console.error('Failed to save auth state', error);
     }
@@ -58,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setAuthToken(null);
     try {
+      // Cleanup FCM
+      FcmService.cleanup();
+      
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userData');
       router.push("/login")
@@ -66,8 +97,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = async (userData: User) => {
+    setUser(userData);
+    try {
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to update user state', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isAuthenticated: !!token, loading }}>
       {children}
     </AuthContext.Provider>
   );

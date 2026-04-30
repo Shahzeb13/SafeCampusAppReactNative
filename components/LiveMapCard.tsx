@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Switch, ActivityIndicator } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
+import { Map as MapLibreMap, Camera, Marker, Callout, UserLocation } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { overpassService, NearbyPlace } from '../services/overpassService';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+
+// MapLibre is a fork of Mapbox. Some versions still need a "kickstart" call even if empty.
+try {
+  MapLibreMap.setAccessToken(null);
+} catch (e) {}
 
 export const LiveMapCard = () => {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -12,8 +19,21 @@ export const LiveMapCard = () => {
   const [isLive, setIsLive] = useState(true);
   const [hospitals, setHospitals] = useState<NearbyPlace[]>([]);
   const [policeStations, setPoliceStations] = useState<NearbyPlace[]>([]);
+  const [lastFetchCoords, setLastFetchCoords] = useState<{lat: number, lng: number} | null>(null);
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
-  const mapRef = React.useRef<MapView>(null);
+  const mapRef = React.useRef<any>(null);
+
+  // Helper to calculate distance in km between two points
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   useEffect(() => {
     let watchSubscription: Location.LocationSubscription | null = null;
@@ -27,33 +47,26 @@ export const LiveMapCard = () => {
       }
 
       if (isLive) {
-        // High accuracy live tracking
         watchSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 2000,
-            distanceInterval: 1,
+            timeInterval: 5000,
+            distanceInterval: 10,
           },
           (newLocation) => {
+            const { latitude, longitude } = newLocation.coords;
             setLocation(newLocation);
             
-            // Fetch data from Overpass API (OpenStreetMap)
-            if (hospitals.length === 0 && policeStations.length === 0 && !fetchingPlaces) {
-              fetchNearbyEmergencyServices(newLocation.coords.latitude, newLocation.coords.longitude);
-            }
-
-            if (mapRef.current) {
-              mapRef.current.animateToRegion({
-                latitude: newLocation.coords.latitude,
-                longitude: newLocation.coords.longitude,
-                latitudeDelta: 0.005,
-                longitudeDelta: 0.005,
-              }, 1000);
+            // Refetch if never fetched OR moved more than 500m from last fetch
+            const shouldRefetch = !lastFetchCoords || getDistance(latitude, longitude, lastFetchCoords.lat, lastFetchCoords.lng) > 0.5;
+            
+            if (shouldRefetch && !fetchingPlaces) {
+              fetchNearbyEmergencyServices(latitude, longitude);
+              setLastFetchCoords({ lat: latitude, lng: longitude });
             }
           }
         );
 
-        // REAL-TIME COMPASS (Points where device points)
         headingSubscription = await Location.watchHeadingAsync((h) => {
           setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
         });
@@ -61,6 +74,7 @@ export const LiveMapCard = () => {
       } else {
         let loc = await Location.getCurrentPositionAsync({});
         setLocation(loc);
+        fetchNearbyEmergencyServices(loc.coords.latitude, loc.coords.longitude);
       }
     };
 
@@ -74,76 +88,73 @@ export const LiveMapCard = () => {
 
   const fetchNearbyEmergencyServices = async (lat: number, lng: number) => {
     setFetchingPlaces(true);
-    setErrorMsg(null);
     try {
-      // Use the optimized combined fetcher
       const places = await overpassService.getNearbyEmergencyPlaces(lat, lng);
-
       setHospitals(places.filter(p => p.type === 'hospital'));
       setPoliceStations(places.filter(p => p.type === 'police'));
-
-      if (places.length === 0) {
-        console.log("No nearby facilities found.");
-      }
     } catch (error: any) {
-      console.error("Failed to fetch Overpass data:", error.message);
-      setErrorMsg("Failed to load nearby services. Please check connection.");
+      console.warn("Overpass error:", error.message);
     } finally {
       setFetchingPlaces(false);
     }
   };
 
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your Location</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Live Safety Radar</Text>
         <View style={styles.headerRight}>
           <View style={[styles.liveBadge, !isLive && styles.liveBadgeInactive]}>
              <View style={[styles.liveDot, !isLive && { backgroundColor: '#757575' }]} />
              <Text style={[styles.liveText, !isLive && { color: '#757575' }]}>
-               {isLive ? 'Live Tracking' : 'Standby'}
+               {isLive ? 'Live' : 'Standby'}
              </Text>
           </View>
           <Switch 
             value={isLive} 
             onValueChange={(val) => setIsLive(val)}
-            trackColor={{ false: "#767577", true: "#673AB7" }} 
+            trackColor={{ false: "#767577", true: "#FF3B70" }} 
             thumbColor="#fff" 
           />
         </View>
       </View>
 
-      <View style={styles.mapWrapper}>
+      <View style={[styles.mapWrapper, { backgroundColor: isDark ? '#1A1A1A' : '#F5F5F5' }]}>
         {location ? (
-          <MapView
+          <MapLibreMap
             ref={mapRef}
-            style={styles.map}
-            showsUserLocation={false} // Custom marker for better control
-            initialRegion={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.005,
-              longitudeDelta: 0.005,
-            }}
+            style={{ flex: 1 }} 
+            styleURL={JSON.stringify({
+              version: 8,
+              sources: {
+                osm: {
+                  type: 'raster',
+                  tiles: [
+                    isDark 
+                      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                  ],
+                  tileSize: 256,
+                  attribution: '© OpenStreetMap contributors',
+                },
+              },
+              layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+            })}
+            logoEnabled={false}
+            attributionEnabled={false}
           >
-            <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              }}
-              rotation={heading} // Real-time compass heading
-              anchor={{ x: 0.5, y: 0.5 }}
-              flat={true} 
-            >
-              <View style={styles.arrowContainer}>
-                 <MaterialCommunityIcons 
-                    name="navigation" 
-                    size={32} 
-                    color="#2196F3" 
-                    style={{ transform: [{ rotate: '0deg' }] }} // Base rotation for the icon itself
-                 />
-              </View>
-            </Marker>
+            <Camera
+              zoomLevel={15}
+              centerCoordinate={[location.coords.longitude, location.coords.latitude]}
+              followUserLocation={isLive}
+              followUserMode="compass"
+              animationDuration={1500}
+            />
+            <UserLocation visible={true} />
 
             {/* Emergency Facilities Markers (Hospitals & Police) */}
             {[...hospitals, ...policeStations].map((point) => {
@@ -154,11 +165,8 @@ export const LiveMapCard = () => {
               return (
                 <Marker
                   key={point.id}
-                  coordinate={{ 
-                    latitude: point.latitude, 
-                    longitude: point.longitude 
-                  }}
-                  title={`${isHospital ? 'Hospital' : 'Police'} - ${point.name}`}
+                  id={point.id}
+                  coordinate={[point.longitude, point.latitude]}
                 >
                   <View style={[styles.facilityBadge, { backgroundColor: color + '20', borderColor: color }]}>
                      <MaterialCommunityIcons 
@@ -167,12 +175,12 @@ export const LiveMapCard = () => {
                         color={color} 
                      />
                   </View>
-                  <Callout tooltip>
+                  <Callout title={point.name}>
                     <View style={styles.calloutContainer}>
-                      <View style={styles.calloutBubble}>
-                        <Text style={styles.calloutTitle} numberOfLines={1}>{point.name}</Text>
-                        <Text style={styles.calloutSubtitle}>{isHospital ? 'Hospital' : 'Police Station'}</Text>
-                        <View style={styles.calloutDivider} />
+                      <View style={[styles.calloutBubble, { backgroundColor: theme.background, borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+                        <Text style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={1}>{point.name}</Text>
+                        <Text style={[styles.calloutSubtitle, { color: theme.icon }]}>{isHospital ? 'Hospital' : 'Police Station'}</Text>
+                        <View style={[styles.calloutDivider, { backgroundColor: isDark ? '#333' : '#F0F0F0' }]} />
                         <View style={styles.calloutActionRow}>
                           <MaterialCommunityIcons 
                             name="information-outline" 
@@ -184,13 +192,13 @@ export const LiveMapCard = () => {
                           </Text>
                         </View>
                       </View>
-                      <View style={styles.calloutArrow} />
+                      <View style={[styles.calloutArrow, { borderBottomColor: theme.background }]} />
                     </View>
                   </Callout>
                 </Marker>
               );
             })}
-          </MapView>
+          </MapLibreMap>
         ) : (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#FF3B70" />
@@ -275,10 +283,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#F5F5F5',
   },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -308,12 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#9E9E9E',
-  },
-  arrowContainer: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   facilityBadge: {
     padding: 6,

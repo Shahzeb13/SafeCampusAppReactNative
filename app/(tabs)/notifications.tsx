@@ -13,6 +13,8 @@ import { notificationService } from '../../services/notificationService';
 import { Notification } from '../../types/notification';
 import { NotificationCard } from '../../components/NotificationCard';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -52,16 +54,19 @@ export default function NotificationsScreen() {
     }
   };
 
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color="#FF3B70" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#F8F9FA' }]}>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item._id}
@@ -77,8 +82,8 @@ export default function NotificationsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="bell-off-outline" size={80} color="#E0E0E0" />
-            <Text style={styles.emptyText}>No notifications yet</Text>
+            <MaterialCommunityIcons name="bell-off-outline" size={80} color={colorScheme === 'dark' ? '#333' : '#E0E0E0'} />
+            <Text style={[styles.emptyText, { color: theme.icon }]}>No notifications yet</Text>
           </View>
         }
       />

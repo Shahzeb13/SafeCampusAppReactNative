@@ -1,78 +1,75 @@
-import axios from 'axios';
-import { GOOGLE_MAPS_API_KEY } from '../config/api';
+import { overpassService, NearbyPlace } from './overpassService';
 
-export interface Place {
-  place_id: string;
-  name: string;
-  vicinity: string;
-  geometry: {
+/**
+ * ⚠️ DEPRECATED: This service previously used Google Places API.
+ * 
+ * Now refactored to use FREE OpenStreetMap via Overpass API.
+ * No API keys, no billing, fully production-ready.
+ * 
+ * @deprecated Use overpassService directly
+ */
+
+export interface Place extends NearbyPlace {
+  place_id?: string;
+  vicinity?: string;
+  geometry?: {
     location: {
       lat: number;
       lng: number;
     };
   };
-  types: string[];
+  types?: string[];
   phoneNumber?: string;
 }
 
+/**
+ * Legacy wrapper for backward compatibility.
+ * All calls now use Overpass API (OpenStreetMap) instead of Google Places.
+ */
 export const googlePlacesService = {
   /**
-   * Fetch nearby hospitals and police stations using Google Places Nearby Search
+   * Fetch nearby hospitals and police stations using FREE Overpass API (OpenStreetMap)
+   * 
+   * Replaces: Google Places Nearby Search
+   * Cost: FREE (no API key required)
+   * Data Source: OpenStreetMap
    */
   getNearbyEmergencyPlaces: async (lat: number, lng: number): Promise<Place[]> => {
     try {
-      const radius = 2000; // 2km
-      const types = ['hospital', 'police'];
+      const places = await overpassService.getNearbyEmergencyPlaces(lat, lng);
       
-      const requests = types.map(type => 
-        axios.get(`https://maps.googleapis.com/maps/api/place/nearbysearch/json`, {
-          params: {
-            location: `${lat},${lng}`,
-            radius: radius,
-            type: type,
-            key: GOOGLE_MAPS_API_KEY
+      // Convert to Place interface for backward compatibility
+      return places.map(p => ({
+        ...p,
+        place_id: p.id,
+        vicinity: 'OpenStreetMap Location',
+        geometry: {
+          location: {
+            lat: p.latitude,
+            lng: p.longitude
           }
-        })
-      );
-
-      const responses = await Promise.all(requests);
-      const allPlaces: Place[] = [];
-
-      responses.forEach(response => {
-        if (response.data.status === 'OK') {
-          allPlaces.push(...response.data.results);
-        }
-      });
-
-      return allPlaces;
+        },
+        types: [p.type]
+      }));
     } catch (error) {
-      console.error('Google Places Nearby Search Error:', error);
+      console.error('Overpass API Error:', error);
       throw error;
     }
   },
 
   /**
-   * Fetch additional details (like phone number) for a specific place
+   * Fetch place details - Overpass has limited metadata.
+   * For phone numbers, you'd need reverse geocoding (Nominatim).
+   * 
+   * Replaces: Google Places Details API
+   * Cost: FREE
    */
   getPlaceDetails: async (placeId: string): Promise<{ phoneNumber?: string }> => {
-    try {
-      const response = await axios.get(`https://maps.googleapis.com/maps/api/place/details/json`, {
-        params: {
-          place_id: placeId,
-          fields: 'formatted_phone_number',
-          key: GOOGLE_MAPS_API_KEY
-        }
-      });
-
-      if (response.data.status === 'OK') {
-        return {
-          phoneNumber: response.data.result.formatted_phone_number
-        };
-      }
-      return {};
-    } catch (error) {
-      console.error('Google Places Details Error:', error);
-      return {};
-    }
+    // Overpass API doesn't provide phone numbers directly
+    // For a production app, you could use Nominatim reverse geocoding
+    // or crowdsourced OSM data, but it's not standardized
+    console.warn('Phone numbers not available from Overpass API. Consider Nominatim for reverse geocoding.');
+    return {};
   }
 };
+

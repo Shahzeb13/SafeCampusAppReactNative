@@ -7,7 +7,10 @@ import { useRouter } from 'expo-router';
 import { testService } from '../../services/testService';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { handleApiError } from '../../utils/errorHandling';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Platform, Switch } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 
 export default function ProfileScreen() {
@@ -29,67 +32,102 @@ export default function ProfileScreen() {
   };
 
 
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+  const { mode, setMode } = useTheme();
+
+  const toggleTheme = () => {
+    setMode(mode === 'light' ? 'dark' : 'light');
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <MaterialCommunityIcons name="account" size={60} color="#FF3B70" />
+    <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#F8F9FA' }]}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.avatarContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#FFF5F7' }]}>
+          {user?.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+          ) : (
+            <MaterialCommunityIcons name="account" size={60} color="#FF3B70" />
+          )}
         </View>
-        <Text style={styles.name}>{user?.username}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
+        <Text style={[styles.name, { color: theme.text }]}>{user?.username}</Text>
+        <Text style={[styles.email, { color: theme.icon }]}>{user?.email}</Text>
+        <View style={[styles.roleBadge, { backgroundColor: colorScheme === 'dark' ? '#333' : '#E8EAF6' }]}>
+          <Text style={[styles.roleText, { color: colorScheme === 'dark' ? '#FFF' : '#1A237E' }]}>{user?.role?.toUpperCase()}</Text>
         </View>
       </View>
 
       <View style={styles.menu}>
-        <TouchableOpacity style={styles.menuItem}>
-          <MaterialCommunityIcons name="account-edit-outline" size={24} color="#616161" />
-          <Text style={styles.menuText}>Edit Profile</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <MaterialCommunityIcons name="shield-outline" size={24} color="#616161" />
-          <Text style={styles.menuText}>Safety Awareness</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <MaterialCommunityIcons name="help-circle-outline" size={24} color="#616161" />
-          <Text style={styles.menuText}>Help & Support</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: theme.background }]}
+          onPress={() => router.push('/edit-profile')}
+        >
+          <MaterialCommunityIcons name="account-edit-outline" size={24} color={theme.icon} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Edit Profile</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.menuItem}
+          style={[styles.menuItem, { backgroundColor: theme.background }]}
+          onPress={toggleTheme}
+        >
+          <MaterialCommunityIcons 
+            name={mode === 'dark' ? "moon-waning-crescent" : "white-balance-sunny"} 
+            size={24} 
+            color={mode === 'dark' ? "#BB86FC" : "#FFB300"} 
+          />
+          <Text style={[styles.menuText, { color: theme.text }]}>Dark Mode</Text>
+          <Switch 
+            value={mode === 'dark'} 
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#767577", true: "#FF3B70" }}
+            thumbColor="#fff"
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: theme.background }]}
+          onPress={() => router.push('/manage-contacts')}
+        >
+          <MaterialCommunityIcons name="account-group-outline" size={24} color="#FF3B70" />
+          <Text style={[styles.menuText, { color: theme.text }]}>Trusted Circle (SOS Contacts)</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.menuItem, { backgroundColor: theme.background }]}>
+          <MaterialCommunityIcons name="shield-outline" size={24} color={theme.icon} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Safety Awareness</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: theme.background }]}
           onPress={() => router.push('/sos-history' as any)}
         >
-          <MaterialCommunityIcons name="history" size={24} color="#FF3B30" />
-          <Text style={styles.menuText}>SOS Alerts History</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
+          <MaterialCommunityIcons name="history" size={24} color="#FF3B70" />
+          <Text style={[styles.menuText, { color: theme.text }]}>SOS Alerts History</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.menuItem} 
+          style={[styles.menuItem, { backgroundColor: theme.background }]} 
           onPress={handleTestServer}
           disabled={testing}
         >
           <MaterialCommunityIcons 
             name={testing ? "loading" : "server-network"} 
             size={24} 
-            color={testing ? "#BDBDBD" : "#1A237E"} 
+            color={testing ? theme.icon : "#1A237E"} 
           />
-          <Text style={styles.menuText}>Test Server Connection</Text>
+          <Text style={[styles.menuText, { color: theme.text }]}>Test Server Connection</Text>
           {testing ? (
-            <ActivityIndicator size="small" color="#1A237E" />
+            <ActivityIndicator size="small" color="#FF3B70" />
           ) : (
             <MaterialCommunityIcons name="broadcast" size={20} color="#4CAF50" />
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
-
+        <TouchableOpacity style={[styles.menuItem, styles.logoutItem, { backgroundColor: theme.background }]} onPress={logout}>
           <MaterialCommunityIcons name="logout" size={24} color="#F44336" />
           <Text style={[styles.menuText, { color: '#F44336' }]}>Logout</Text>
         </TouchableOpacity>
@@ -125,6 +163,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
   name: {
     fontSize: 22,

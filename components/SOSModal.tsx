@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -8,16 +8,12 @@ import {
   ActivityIndicator,
   Dimensions,
   SafeAreaView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { sosService } from '../services/sosService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { handleApiError } from '../utils/errorHandling';
@@ -64,24 +60,39 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
   }, [visible, autoTrigger]);
 
   // Pulse animation for the "Sending" state
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0.6);
+  const pulseScale = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0.6)).current;
+  const pulseAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (status === 'sending') {
-      pulseScale.value = withRepeat(
-        withTiming(1.5, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        -1,
-        false
+      pulseAnimation.current = Animated.loop(
+        Animated.parallel([
+          Animated.timing(pulseScale, {
+            toValue: 1.5,
+            duration: 1000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseOpacity, {
+            toValue: 0,
+            duration: 1000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
       );
-      pulseOpacity.value = withRepeat(
-        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        -1,
-        false
-      );
+      pulseAnimation.current.start();
     } else {
-      pulseScale.value = 1;
-      pulseOpacity.value = 0.6;
+      if (pulseAnimation.current) {
+        pulseAnimation.current.stop();
+      }
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0.6);
+    }
+    
+    return () => {
+      if (pulseAnimation.current) pulseAnimation.current.stop();
     }
   }, [status]);
 
@@ -201,7 +212,10 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
               <Animated.View
                 style={[
                   styles.pulseRing,
-                  { transform: [{ scale: pulseScale.value }], opacity: pulseOpacity.value },
+                  { 
+                    transform: [{ scale: pulseScale }], 
+                    opacity: pulseOpacity 
+                  },
                   { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#FF3B30' }
                 ]}
               />

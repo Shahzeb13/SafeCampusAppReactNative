@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 interface GridActionCardProps {
   title: string;
@@ -17,14 +19,21 @@ export const GridActionCard: React.FC<GridActionCardProps> = ({
   color, 
   onPress 
 }) => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: theme.background }]} 
+      onPress={onPress} 
+      activeOpacity={0.8}
+    >
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
         <MaterialCommunityIcons name={icon} size={28} color={color} />
       </View>
       <View style={styles.textContainer}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+        <Text style={[styles.subtitle, { color: theme.icon }]}>{subtitle}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -1,40 +1,80 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+import { testService } from '../services/testService';
 
-interface StatusCardProps {
-  isEnabled: boolean;
-  onToggle: () => void;
-}
+export const StatusCard: React.FC = () => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const [isServerAlive, setIsServerAlive] = useState(false);
 
-export const StatusCard: React.FC<StatusCardProps> = ({ isEnabled, onToggle }) => {
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const response = await testService.checkServer();
+        if (response) {
+          console.log('Server Connection Response:', response);
+          setIsServerAlive(true);
+        }
+      } catch (error) {
+        console.error('Server is offline:', error);
+        setIsServerAlive(false);
+      }
+    };
+
+    checkServer();
+    const intervalId = setInterval(checkServer, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const getBackgroundColor = () => {
+    if (!isServerAlive) return isDark ? '#3B1A1A' : '#FFEBEE';
+    return isDark ? '#1A237E33' : '#E3F2FD';
+  };
+
+  const getBorderColor = () => {
+    if (!isServerAlive) return isDark ? '#D32F2F66' : '#FFCDD2';
+    return isDark ? '#1976D266' : '#BBDEFB';
+  };
+
+  const getIconColor = () => {
+    if (!isServerAlive) return '#F44336';
+    return '#2196F3';
+  };
+
   return (
-    <View style={[styles.container, !isEnabled && styles.containerDisabled]}>
+    <View style={[
+      styles.container, 
+      { backgroundColor: getBackgroundColor(), borderColor: getBorderColor() }
+    ]}>
       <View style={styles.leftContent}>
         <View style={styles.statusRow}>
-          <View style={[styles.dot, !isEnabled && styles.dotDisabled]} />
-          <Text style={[styles.title, !isEnabled && styles.titleDisabled]}>
-            {isEnabled ? 'Connected to Emergency Server' : 'Monitoring Paused'}
+          <View style={[styles.dot, { backgroundColor: getIconColor() }]} />
+          <Text style={[
+            styles.title, 
+            { color: isDark ? '#EEE' : (isServerAlive ? '#0D47A1' : '#B71C1C') }
+          ]}>
+            {isServerAlive ? 'Connected to Emergency Server' : 'Server is offline!'}
           </Text>
         </View>
-        <Text style={[styles.subtitle, !isEnabled && styles.subtitleDisabled]}>
-          {isEnabled ? 'All systems operational' : 'Private mode active'}
+        <Text style={[
+          styles.subtitle, 
+          { color: isDark ? '#AAA' : (isServerAlive ? '#1565C0' : '#D32F2F') }
+        ]}>
+          {isServerAlive ? 'All systems operational' : 'Server is down'}
         </Text>
       </View>
       <View style={styles.rightContent}>
         <View style={styles.checkBadge}>
           <MaterialCommunityIcons 
-            name={isEnabled ? "check-circle" : "shield-off"} 
-            size={20} 
-            color={isEnabled ? "#4CAF50" : "#757575"} 
+            name={isServerAlive ? "server-network" : "server-network-off"} 
+            size={24} 
+            color={getIconColor()} 
           />
         </View>
-        <Switch 
-          value={isEnabled} 
-          onValueChange={onToggle}
-          trackColor={{ false: "#767577", true: "#673AB7" }}
-          thumbColor="#fff"
-        />
       </View>
     </View>
   );
@@ -42,7 +82,6 @@ export const StatusCard: React.FC<StatusCardProps> = ({ isEnabled, onToggle }) =
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#E8F5E9',
     borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
@@ -50,7 +89,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
   },
   leftContent: {
     flex: 1,
@@ -64,21 +102,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
     marginRight: 8,
   },
-  containerDisabled: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E0E0E0',
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  dotDisabled: {
-    backgroundColor: '#9E9E9E',
-  },
-  titleDisabled: {
-    color: '#616161',
-  },
-  subtitleDisabled: {
-    color: '#9E9E9E',
+  subtitle: {
+    fontSize: 13,
   },
   rightContent: {
     flexDirection: 'row',

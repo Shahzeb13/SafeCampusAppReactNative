@@ -6,11 +6,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import { Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 
-import 'react-native-reanimated';
+
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SnackbarProvider } from '../context/SnackbarContext';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider as AppThemeProvider, useTheme } from '../context/ThemeContext';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -20,7 +21,15 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <AppThemeProvider>
+      <LayoutContent />
+    </AppThemeProvider>
+  );
+}
+
+function LayoutContent() {
+  const { theme } = useTheme();
 
   const [loaded, error] = useFonts({
     Inter_400Regular,
@@ -50,18 +59,18 @@ export default function RootLayout() {
   };
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : CustomDefaultTheme}>
+    <ThemeProvider value={theme === 'dark' ? DarkTheme : CustomDefaultTheme}>
       <SnackbarProvider>
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="register" />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="register" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="submit-incident" options={{ title: 'Report Incident' }} />
-            <Stack.Screen name="my-incidents" options={{ title: 'My Reports' }} />
-            <Stack.Screen name="incident/[id]" options={{ title: 'Incident Details' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name="submit-incident" options={{ headerShown: false }} />
+            <Stack.Screen name="my-incidents" options={{ headerShown: false }} />
+            <Stack.Screen name="incident/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
           </Stack>
         </AuthProvider>
         <StatusBar style="auto" />

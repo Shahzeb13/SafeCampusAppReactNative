@@ -1,46 +1,71 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 const SAFETY_TIPS = [
     {
-        title: 'Personal Safety',
-        icon: 'account-shield-outline',
+        title: 'Movement Around Campus (Dhamtour Side)',
+        icon: 'map-marker-path',
         tips: [
-            'Avoid walking alone at night in poorly lit areas.',
-            'Keep your belongings secure and never leave them unattended.',
-            'Be aware of your surroundings at all times.',
-            'Keep emergency contacts on speed dial.'
+            'Avoid walking alone on the Dhamtour road after Maghrib—traffic gets sparse and areas become quiet.',
+            'If you stay late on campus, leave in groups or arrange transport beforehand.',
+            'Stick to main roads; avoid shortcuts through empty plots or hilly paths.',
+            'Keep your phone charged—network can drop in some areas.'
         ]
     },
     {
-        title: 'Theft Prevention',
-        icon: 'lock-outline',
+        title: 'Transport & Commute Safety',
+        icon: 'car-outline',
         tips: [
-            'Lock your doors and windows when leaving your room/locker.',
-            'Do not display large amounts of cash or expensive gadgets.',
-            'Register your electronics with campus security.',
-            'Use high-quality locks for bicycles and motorcycles.'
+            'Prefer known rickshaws or ride services—avoid random lifts, even if offered by students.',
+            'Share your live location with a friend when heading home at night.',
+            'Note the vehicle number if using local transport regularly.',
+            'Avoid standing alone for long on isolated bus stops.'
         ]
     },
     {
-        title: 'Fire Safety',
-        icon: 'fire-extinguisher',
+        title: 'Mobile & Theft Awareness',
+        icon: 'cellphone-lock',
         tips: [
-            'Know the nearest fire exit and assembly point.',
-            'Never block fire exits or tamper with fire equipment.',
-            'In case of fire, use stairs, not elevators.',
-            'Notify security immediately if you smell smoke.'
+            'Don’t use your phone openly while walking near roads—snatching cases do happen.',
+            'Keep your phone and wallet in front pockets or secure bags.',
+            'Avoid carrying expensive gadgets unnecessarily to campus.',
+            'Use basic phone lock + tracking (Find My Device).'
+        ]
+    },
+    {
+        title: 'Emergency & Real Situations',
+        icon: 'alert-outline',
+        tips: [
+            'Save campus security and 15 (police) on speed dial.',
+            'If something feels off, trust your instinct and leave immediately.',
+            'In case of harassment or threat, go to crowded spots or campus gate.',
+            'Use the SOS feature immediately instead of trying to handle things alone.'
+        ]
+    },
+    {
+        title: 'Weather & Terrain Awareness',
+        icon: 'weather-fog',
+        tips: [
+            'In winter or fog, visibility drops—avoid late travel on hilly roads.',
+            'Roads around Abbottabad can get slippery during rain—be careful on bikes.',
+            'Street lighting is weak in some areas—carry a small flashlight if needed.',
+            'Avoid isolated viewpoints or hills after dark.'
         ]
     }
 ];
 
 export default function SafetyScreen() {
+    const colorScheme = useColorScheme() ?? 'light';
+    const theme = Colors[colorScheme];
+
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#F8F9FA' }]} contentContainerStyle={styles.content}>
             <View style={styles.header}>
-                <Text style={styles.title}>Safety Guidelines</Text>
-                <Text style={styles.subtitle}>Stay safe and informed on campus</Text>
+                <Text style={[styles.title, { color: theme.text }]}>Safety Guidelines</Text>
+                <Text style={[styles.subtitle, { color: theme.icon }]}>Stay safe and informed on campus</Text>
             </View>
 
             <View style={styles.emergencyBanner}>
@@ -51,23 +76,23 @@ export default function SafetyScreen() {
                 </View>
                 <TouchableOpacity 
                     style={styles.callButton}
-                    onPress={() => Linking.openURL('tel:1234')}
+                    onPress={() => Linking.openURL('tel:15')}
                 >
                     <MaterialCommunityIcons name="phone" size={20} color="#FF3B70" />
                 </TouchableOpacity>
             </View>
 
             {SAFETY_TIPS.map((section, idx) => (
-                <View key={idx} style={styles.section}>
+                <View key={idx} style={[styles.section, { backgroundColor: theme.background }]}>
                     <View style={styles.sectionHeader}>
                         <MaterialCommunityIcons name={section.icon as any} size={24} color="#FF3B70" />
-                        <Text style={styles.sectionTitle}>{section.title}</Text>
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>{section.title}</Text>
                     </View>
                     <View style={styles.tipsList}>
                         {section.tips.map((tip, tipIdx) => (
                             <View key={tipIdx} style={styles.tipItem}>
                                 <View style={styles.bullet} />
-                                <Text style={styles.tipText}>{tip}</Text>
+                                <Text style={[styles.tipText, { color: theme.icon }]}>{tip}</Text>
                             </View>
                         ))}
                     </View>

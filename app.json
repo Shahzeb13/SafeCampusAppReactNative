@@ -9,9 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SafeCampus needs your location to show your position on the map and for emergency tracking."
+      }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -23,7 +27,9 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "package": "com.anonymous.SafeCampus"
     },
@@ -32,6 +38,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@maplibre/maplibre-react-native",
+      "@react-native-firebase/app",
       "expo-router",
       [
         "expo-splash-screen",
@@ -59,6 +67,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c281f2cb-bdbf-4b69-8929-363a4bb5683d"
+      }
+    },
+    "owner": "shahzeb1234567"
   }
 }

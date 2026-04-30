@@ -1,13 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming,
-  withDelay,
-  runOnJS
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Dimensions, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -21,13 +13,24 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ visible, message, type, onDismiss }) => {
-  const translateY = useSharedValue(-100);
-  const opacity = useSharedValue(0);
+  const translateY = useRef(new Animated.Value(-100)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(50);
-      opacity.value = withTiming(1, { duration: 300 });
+      Animated.parallel([
+        Animated.spring(translateY, {
+          toValue: 50,
+          useNativeDriver: true,
+          tension: 40,
+          friction: 7,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
       const timer = setTimeout(() => {
         hide();
@@ -38,20 +41,28 @@ const Toast: React.FC<ToastProps> = ({ visible, message, type, onDismiss }) => {
   }, [visible]);
 
   const hide = () => {
-    translateY.value = withTiming(-100, { duration: 300 });
-    opacity.value = withTiming(0, { duration: 300 }, () => {
-      runOnJS(onDismiss)();
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -100,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onDismiss();
     });
   };
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-      opacity: opacity.value,
-    };
-  });
+  const animatedStyle = {
+    transform: [{ translateY }],
+    opacity,
+  };
 
-  if (!visible && opacity.value === 0) return null;
+  if (!visible) return null;
 
   const getIcon = () => {
     switch (type) {

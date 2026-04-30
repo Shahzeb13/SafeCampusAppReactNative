@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { Fonts } from '@/constants/theme';
-
 import {
   StyleSheet,
   View,
@@ -10,57 +8,48 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useSnackbar } from '../context/SnackbarContext';
-import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '@/config/api';
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandling';
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function ResetPasswordScreen() {
+  const { email } = useLocalSearchParams<{ email: string }>();
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
-  const { login } = useAuth();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  const handleResetPassword = async () => {
+    if (!otp || !newPassword || !confirmPassword) {
       showSnackbar('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showSnackbar('Passwords do not match', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const response = await axios.post(`${API_BASE_URL}/auth/reset-password`, {
         email,
-        password,
-      }, {
-        timeout: 10000,
+        otp,
+        newPassword,
       });
-
-      if (response.data) {
-        showSnackbar('Logged in successfully', 'success');
-        
-        // Use the context login function
-        // setting up login context  here 
-        login({
-          id: response.data.id || response.data.userId,
-          username: response.data.username,
-          email: response.data.email,
-          role: response.data.role,
-          avatar: response.data.avatar,
-        }, response.data.token);
-
-        // Navigate to main app
-        router.replace('/(tabs)');
+      
+      if (response.data.success) {
+        showSnackbar('Password reset successful', 'success');
+        router.replace('/login');
       }
     } catch (error) {
       handleApiError(error, showSnackbar);
@@ -74,15 +63,14 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#FAF9F6' }]}>
-      {/* Background Blobs */}
-      <LinearGradient
-        colors={['#FF4B6C', '#FF8EBC']}
-        style={styles.topBlob}
-      />
-      <LinearGradient
-        colors={['#FF4B6C', '#FF8EBC']}
-        style={styles.bottomBlob}
-      />
+      <LinearGradient colors={['#FF4B6C', '#FF8EBC']} style={styles.topBlob} />
+      
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => router.back()}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={28} color="white" />
+      </TouchableOpacity>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -91,22 +79,24 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.card, { backgroundColor: theme.background }]}>
             <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="login-variant" size={60} color="#FF3B70" />
+              <MaterialCommunityIcons name="shield-check-outline" size={60} color="#FF3B70" />
             </View>
 
-            <Text style={[styles.title, { color: theme.text }]}>Welcome Back to SafeCampus</Text>
-            <Text style={[styles.subtitle, { color: theme.icon }]}>Sign in to continue to your account</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Reset Password</Text>
+            <Text style={[styles.subtitle, { color: theme.icon }]}>
+              Enter the 6-digit OTP sent to {email} and your new password.
+            </Text>
 
             <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
-              <MaterialCommunityIcons name="email-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="numeric" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
-                placeholder="you@example.com"
+                placeholder="6-digit OTP"
                 placeholderTextColor={theme.icon}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="number-pad"
+                maxLength={6}
               />
             </View>
 
@@ -114,24 +104,29 @@ export default function LoginScreen() {
               <MaterialCommunityIcons name="lock-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
-                placeholder="Enter your Password"
+                placeholder="New Password"
                 placeholderTextColor={theme.icon}
-                value={password}
-                onChangeText={setPassword}
+                value={newPassword}
+                onChangeText={setNewPassword}
                 secureTextEntry
               />
             </View>
-            
-            <TouchableOpacity 
-              style={styles.forgotPasswordContainer}
-              onPress={() => router.push('/forgot-password')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
+              <MaterialCommunityIcons name="lock-check-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: theme.text }]}
+                placeholder="Confirm New Password"
+                placeholderTextColor={theme.icon}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            </View>
 
             <TouchableOpacity 
               activeOpacity={0.8} 
-              onPress={handleLogin}
+              onPress={handleResetPassword}
               disabled={loading}
             >
               <LinearGradient
@@ -140,18 +135,9 @@ export default function LoginScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.button}
               >
-                <Text style={styles.buttonText}>{loading ? 'SIGNING IN...' : 'SIGN IN'}</Text>
+                <Text style={styles.buttonText}>{loading ? 'RESETTING...' : 'RESET PASSWORD'}</Text>
               </LinearGradient>
             </TouchableOpacity>
-
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: theme.text }]}>Don't have an Account? </Text>
-              <Link href="/register" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.linkText}>Sign up</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -163,7 +149,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF9F6',
-    overflow: 'hidden',
   },
   topBlob: {
     position: 'absolute',
@@ -174,14 +159,12 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     opacity: 0.8,
   },
-  bottomBlob: {
+  backButton: {
     position: 'absolute',
-    bottom: -150,
-    left: -100,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    opacity: 0.8,
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 10,
   },
   keyboardView: {
     flex: 1,
@@ -190,10 +173,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
-    zIndex: 1,
   },
   card: {
-    backgroundColor: 'white',
     borderRadius: 40,
     padding: 30,
     alignItems: 'center',
@@ -210,21 +191,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.heading,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A237E',
     textAlign: 'center',
     marginBottom: 10,
   },
   subtitle: {
     fontFamily: Fonts.regular,
     fontSize: 14,
-    color: '#9E9E9E',
     marginBottom: 30,
     textAlign: 'center',
+    lineHeight: 20,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
     borderRadius: 15,
     marginBottom: 15,
     paddingHorizontal: 15,
@@ -236,7 +215,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#333',
     fontSize: 16,
     fontFamily: Fonts.regular,
   },
@@ -246,12 +224,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
     shadowColor: '#FF4B6C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
+    marginTop: 10,
   },
   buttonText: {
     color: 'white',
@@ -259,31 +237,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: Fonts.bold,
     letterSpacing: 1,
-  },
-  footer: {
-    flexDirection: 'row',
-    marginTop: 25,
-  },
-  footerText: {
-    color: '#333',
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-  },
-  linkText: {
-    color: '#FF3B70',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: Fonts.bold,
-  },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-    marginRight: 5,
-  },
-  forgotPasswordText: {
-    color: '#FF3B70',
-    fontSize: 14,
-    fontFamily: Fonts.medium,
-    fontWeight: '600',
   },
 });

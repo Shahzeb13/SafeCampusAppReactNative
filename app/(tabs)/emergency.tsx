@@ -13,6 +13,8 @@ import {
     ScrollView
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 import { emergencyService, EmergencyContact } from '../../services/emergencyService';
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -113,10 +115,18 @@ export default function EmergencyScreen() {
         setModalVisible(true);
     };
 
+    const colorScheme = useColorScheme() ?? 'light';
+    const theme = Colors[colorScheme];
+    const isDark = colorScheme === 'dark';
+
     const renderContact = ({ item }: { item: EmergencyContact }) => (
-        <View style={[styles.contactCard, item.isPrimary && styles.primaryCard]}>
+        <View style={[
+            styles.contactCard, 
+            { backgroundColor: theme.background },
+            item.isPrimary && styles.primaryCard
+        ]}>
             <View style={styles.cardHeader}>
-                <View style={styles.iconCircle}>
+                <View style={[styles.iconCircle, { backgroundColor: isDark ? '#1A1A1A' : '#FFF5F7' }]}>
                     <MaterialCommunityIcons 
                         name={getCategoryIcon(item.category)} 
                         size={24} 
@@ -124,13 +134,13 @@ export default function EmergencyScreen() {
                     />
                 </View>
                 <View style={styles.contactInfo}>
-                    <Text style={styles.contactName}>{item.name}</Text>
-                    <Text style={styles.contactCategory}>{item.category.toUpperCase()}</Text>
+                    <Text style={[styles.contactName, { color: theme.text }]}>{item.name}</Text>
+                    <Text style={[styles.contactCategory, { color: theme.icon }]}>{item.category.toUpperCase()}</Text>
                 </View>
                 {isAdmin && (
                     <View style={styles.adminActions}>
                         <TouchableOpacity onPress={() => openEdit(item)}>
-                            <MaterialCommunityIcons name="pencil-outline" size={20} color="#757575" />
+                            <MaterialCommunityIcons name="pencil-outline" size={20} color={theme.icon} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDelete(item._id)}>
                             <MaterialCommunityIcons name="delete-outline" size={20} color="#FF3B70" />
@@ -141,6 +151,28 @@ export default function EmergencyScreen() {
             
             <TouchableOpacity 
                 style={styles.callStrip}
+                onPress={() => handleCall(item.phoneNumber)}
+            >
+                <MaterialCommunityIcons name="phone" size={18} color="white" />
+                <Text style={styles.phoneNumber}>{item.phoneNumber}</Text>
+                <Text style={styles.callNow}>CALL NOW</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderPersonalContact = ({ item }: { item: any }) => (
+        <View style={[styles.contactCard, { backgroundColor: theme.background }]}>
+            <View style={styles.cardHeader}>
+                <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
+                    <MaterialCommunityIcons name="account-alert" size={24} color="#2196F3" />
+                </View>
+                <View style={styles.contactInfo}>
+                    <Text style={[styles.contactName, { color: theme.text }]}>{item.name}</Text>
+                    <Text style={[styles.contactCategory, { color: '#2196F3' }]}>PERSONAL SOS CONTACT</Text>
+                </View>
+            </View>
+            <TouchableOpacity 
+                style={[styles.callStrip, { backgroundColor: '#2196F3' }]}
                 onPress={() => handleCall(item.phoneNumber)}
             >
                 <MaterialCommunityIcons name="phone" size={18} color="white" />
@@ -163,16 +195,16 @@ export default function EmergencyScreen() {
 
     if (loading) {
         return (
-            <View style={styles.center}>
+            <View style={[styles.center, { backgroundColor: theme.background }]}>
                 <ActivityIndicator size="large" color="#FF3B70" />
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Emergency Contacts</Text>
+        <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#F8F9FA' }]}>
+            <View style={[styles.header, { backgroundColor: theme.background }]}>
+                <Text style={[styles.title, { color: theme.text }]}>Emergency Contacts</Text>
                 {isAdmin && (
                     <TouchableOpacity 
                         style={styles.addButton}
@@ -188,57 +220,94 @@ export default function EmergencyScreen() {
                 keyExtractor={(item) => item._id}
                 renderItem={renderContact}
                 contentContainerStyle={styles.list}
+                ListHeaderComponent={
+                    user?.personalEmergencyContacts && user.personalEmergencyContacts.length > 0 ? (
+                        <View style={styles.personalSection}>
+                            <View style={styles.sectionHeader}>
+                                <MaterialCommunityIcons name="account-group" size={20} color="#2196F3" />
+                                <Text style={[styles.sectionTitle, { color: theme.text }]}>Personal SOS Contacts</Text>
+                            </View>
+                            {user.personalEmergencyContacts.map((item, index) => (
+                                <View key={index}>
+                                    {renderPersonalContact({ item })}
+                                </View>
+                            ))}
+                            <View style={[styles.sectionDivider, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]} />
+                            <View style={styles.sectionHeader}>
+                                <MaterialCommunityIcons name="office-building" size={20} color="#FF3B70" />
+                                <Text style={[styles.sectionTitle, { color: theme.text }]}>Campus Emergency Services</Text>
+                            </View>
+                        </View>
+                    ) : null
+                }
                 ListEmptyComponent={
                     <View style={styles.empty}>
-                        <MaterialCommunityIcons name="phone-off" size={60} color="#E0E0E0" />
-                        <Text style={styles.emptyText}>No contacts found</Text>
+                        <View style={styles.emptyIconContainer}>
+                            <MaterialCommunityIcons name="shield-account-outline" size={80} color={isDark ? '#333' : '#F0F0F0'} />
+                            <MaterialCommunityIcons 
+                                name="plus-circle" 
+                                size={30} 
+                                color="#FF3B70" 
+                                style={styles.emptyPlusIcon} 
+                            />
+                        </View>
+                        <Text style={[styles.emptyTitle, { color: theme.text }]}>No Campus Services Found</Text>
+                        <Text style={[styles.emptySubtitle, { color: theme.icon }]}>
+                            {isAdmin 
+                                ? "It looks like the emergency database is empty. Tap the '+' button above to add the first campus emergency contact."
+                                : "No campus emergency contacts have been added yet. Please contact your administrator if you believe this is an error."}
+                        </Text>
                     </View>
                 }
             />
 
             <Modal visible={modalVisible} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>
                                 {editingContact ? 'Edit Contact' : 'Add New Contact'}
                             </Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <MaterialCommunityIcons name="close" size={24} color="#333" />
+                                <MaterialCommunityIcons name="close" size={24} color={theme.text} />
                             </TouchableOpacity>
                         </View>
                         
-                        <ScrollView style={styles.modalForm}>
-                            <Text style={styles.label}>Full Name</Text>
+                        <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+                            <Text style={[styles.label, { color: theme.text }]}>Full Name</Text>
                             <TextInput 
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: isDark ? '#1A1A1A' : '#F5F5F5', color: theme.text, borderColor: isDark ? '#333' : '#E0E0E0' }]}
                                 value={formData.name}
                                 onChangeText={(val) => setFormData({...formData, name: val})}
                                 placeholder="e.g. Campus Security Office"
+                                placeholderTextColor={theme.icon}
                             />
 
-                            <Text style={styles.label}>Phone Number</Text>
+                            <Text style={[styles.label, { color: theme.text }]}>Phone Number</Text>
                             <TextInput 
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: isDark ? '#1A1A1A' : '#F5F5F5', color: theme.text, borderColor: isDark ? '#333' : '#E0E0E0' }]}
                                 value={formData.phoneNumber}
                                 onChangeText={(val) => setFormData({...formData, phoneNumber: val})}
                                 placeholder="e.g. 051-1234567"
+                                placeholderTextColor={theme.icon}
                                 keyboardType="phone-pad"
                             />
 
-                            <Text style={styles.label}>Category</Text>
+                            <Text style={[styles.label, { color: theme.text }]}>Category</Text>
                             <View style={styles.categoryPicker}>
                                 {['security', 'ambulance', 'fire', 'admin', 'hostel', 'other'].map((cat) => (
                                     <TouchableOpacity 
                                         key={cat}
                                         style={[
                                             styles.catChip, 
+                                            { backgroundColor: isDark ? '#1A1A1A' : '#F5F5F5', borderColor: isDark ? '#333' : '#E0E0E0' },
                                             formData.category === cat && styles.activeCatChip
                                         ]}
                                         onPress={() => setFormData({...formData, category: cat as any})}
                                     >
                                         <Text style={[
                                             styles.catChipText,
+                                            { color: theme.icon },
                                             formData.category === cat && styles.activeCatChipText
                                         ]}>{cat}</Text>
                                     </TouchableOpacity>
@@ -254,7 +323,7 @@ export default function EmergencyScreen() {
                                     size={24} 
                                     color="#FF3B70" 
                                 />
-                                <Text style={styles.primaryToggleText}>Mark as Primary Emergency Contact</Text>
+                                <Text style={[styles.primaryToggleText, { color: theme.text }]}>Mark as Primary Emergency Contact</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -290,6 +359,25 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#1A237E',
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 10,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+        marginTop: 5,
+    },
+    personalSection: {
+        marginBottom: 10,
+    },
+    sectionDivider: {
+        height: 1,
+        marginVertical: 20,
+        opacity: 0.5,
     },
     addButton: {
         backgroundColor: '#FF3B70',
@@ -371,13 +459,31 @@ const styles = StyleSheet.create({
         fontWeight: '900',
     },
     empty: {
-        marginTop: 100,
+        marginTop: 80,
         alignItems: 'center',
+        paddingHorizontal: 40,
     },
-    emptyText: {
-        marginTop: 20,
-        color: '#9E9E9E',
-        fontSize: 16,
+    emptyIconContainer: {
+        position: 'relative',
+        marginBottom: 20,
+    },
+    emptyPlusIcon: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderRadius: 15,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 10,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
     },
     modalOverlay: {
         flex: 1,

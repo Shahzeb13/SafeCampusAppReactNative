@@ -1,38 +1,42 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   Dimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { Fonts } from '@/constants/theme';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const scale = useSharedValue(0.5);
-  const opacity = useSharedValue(0);
+  
+  const scale = useRef(new Animated.Value(0.5)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Animation for logo
-    scale.value = withTiming(1, { 
-      duration: 1000, 
-      easing: Easing.out(Easing.back(1.5)) 
-    });
-    opacity.value = withTiming(1, { duration: 1000 });
+    Animated.parallel([
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Navigate after 3 seconds
     const timer = setTimeout(() => {
@@ -46,12 +50,10 @@ export default function SplashScreen() {
     return () => clearTimeout(timer);
   }, [isAuthenticated]);
 
-  const animatedLogoStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      opacity: opacity.value,
-    };
-  });
+  const animatedLogoStyle = {
+    transform: [{ scale }],
+    opacity,
+  };
 
   return (
     <View style={styles.container}>

@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { Fonts } from '@/constants/theme';
-
 import {
   StyleSheet,
   View,
@@ -10,57 +8,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useSnackbar } from '../context/SnackbarContext';
-import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '@/config/api';
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandling';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
-  const { login } = useAuth();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      showSnackbar('Please fill in all fields', 'error');
+  const handleRequestOTP = async () => {
+    if (!email) {
+      showSnackbar('Please enter your email address', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email,
-        password,
-      }, {
-        timeout: 10000,
-      });
-
-      if (response.data) {
-        showSnackbar('Logged in successfully', 'success');
-        
-        // Use the context login function
-        // setting up login context  here 
-        login({
-          id: response.data.id || response.data.userId,
-          username: response.data.username,
-          email: response.data.email,
-          role: response.data.role,
-          avatar: response.data.avatar,
-        }, response.data.token);
-
-        // Navigate to main app
-        router.replace('/(tabs)');
+      const response = await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
+      if (response.data.success) {
+        showSnackbar('OTP sent to your email', 'success');
+        router.push({
+          pathname: '/reset-password',
+          params: { email }
+        });
       }
     } catch (error) {
       handleApiError(error, showSnackbar);
@@ -74,15 +53,14 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#FAF9F6' }]}>
-      {/* Background Blobs */}
-      <LinearGradient
-        colors={['#FF4B6C', '#FF8EBC']}
-        style={styles.topBlob}
-      />
-      <LinearGradient
-        colors={['#FF4B6C', '#FF8EBC']}
-        style={styles.bottomBlob}
-      />
+      <LinearGradient colors={['#FF4B6C', '#FF8EBC']} style={styles.topBlob} />
+      
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => router.back()}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={28} color="white" />
+      </TouchableOpacity>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -91,11 +69,13 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.card, { backgroundColor: theme.background }]}>
             <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="login-variant" size={60} color="#FF3B70" />
+              <MaterialCommunityIcons name="lock-reset" size={60} color="#FF3B70" />
             </View>
 
-            <Text style={[styles.title, { color: theme.text }]}>Welcome Back to SafeCampus</Text>
-            <Text style={[styles.subtitle, { color: theme.icon }]}>Sign in to continue to your account</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Forgot Password?</Text>
+            <Text style={[styles.subtitle, { color: theme.icon }]}>
+              Enter your email address and we'll send you an OTP to reset your password.
+            </Text>
 
             <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="email-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
@@ -110,28 +90,9 @@ export default function LoginScreen() {
               />
             </View>
 
-            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
-              <MaterialCommunityIcons name="lock-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: theme.text }]}
-                placeholder="Enter your Password"
-                placeholderTextColor={theme.icon}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.forgotPasswordContainer}
-              onPress={() => router.push('/forgot-password')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity 
               activeOpacity={0.8} 
-              onPress={handleLogin}
+              onPress={handleRequestOTP}
               disabled={loading}
             >
               <LinearGradient
@@ -140,18 +101,9 @@ export default function LoginScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.button}
               >
-                <Text style={styles.buttonText}>{loading ? 'SIGNING IN...' : 'SIGN IN'}</Text>
+                <Text style={styles.buttonText}>{loading ? 'SENDING OTP...' : 'SEND OTP'}</Text>
               </LinearGradient>
             </TouchableOpacity>
-
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: theme.text }]}>Don't have an Account? </Text>
-              <Link href="/register" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.linkText}>Sign up</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -163,7 +115,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF9F6',
-    overflow: 'hidden',
   },
   topBlob: {
     position: 'absolute',
@@ -174,14 +125,12 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     opacity: 0.8,
   },
-  bottomBlob: {
+  backButton: {
     position: 'absolute',
-    bottom: -150,
-    left: -100,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    opacity: 0.8,
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 10,
   },
   keyboardView: {
     flex: 1,
@@ -190,10 +139,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
-    zIndex: 1,
   },
   card: {
-    backgroundColor: 'white',
     borderRadius: 40,
     padding: 30,
     alignItems: 'center',
@@ -210,23 +157,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.heading,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A237E',
     textAlign: 'center',
     marginBottom: 10,
   },
   subtitle: {
     fontFamily: Fonts.regular,
     fontSize: 14,
-    color: '#9E9E9E',
     marginBottom: 30,
     textAlign: 'center',
+    lineHeight: 20,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
     borderRadius: 15,
-    marginBottom: 15,
+    marginBottom: 25,
     paddingHorizontal: 15,
     width: '100%',
     height: 55,
@@ -236,7 +181,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#333',
     fontSize: 16,
     fontFamily: Fonts.regular,
   },
@@ -246,7 +190,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
     shadowColor: '#FF4B6C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -259,31 +202,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: Fonts.bold,
     letterSpacing: 1,
-  },
-  footer: {
-    flexDirection: 'row',
-    marginTop: 25,
-  },
-  footerText: {
-    color: '#333',
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-  },
-  linkText: {
-    color: '#FF3B70',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: Fonts.bold,
-  },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-    marginRight: 5,
-  },
-  forgotPasswordText: {
-    color: '#FF3B70',
-    fontSize: 14,
-    fontFamily: Fonts.medium,
-    fontWeight: '600',
   },
 });

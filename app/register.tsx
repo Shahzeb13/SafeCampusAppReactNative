@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 import { useSnackbar } from '../context/SnackbarContext';
 import { API_BASE_URL } from '@/config/api';
 import axios from 'axios';
@@ -75,8 +77,11 @@ export default function RegisterScreen() {
     }
   };
 
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#FAF9F6' }]}>
       {/* Background Blobs */}
       <LinearGradient
         colors={['#FF4B6C', '#FF8EBC']}
@@ -92,30 +97,32 @@ export default function RegisterScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.background }]}>
             <View style={styles.iconContainer}>
               <MaterialCommunityIcons name="account-plus" size={60} color="#FF3B70" />
             </View>
 
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign up to continue to your account</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Welcome Back</Text>
+            <Text style={[styles.subtitle, { color: theme.icon }]}>Sign up to continue to your account</Text>
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="account-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="Username"
+                placeholderTextColor={theme.icon}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
               />
             </View>
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="email-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="Email"
+                placeholderTextColor={theme.icon}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -123,11 +130,12 @@ export default function RegisterScreen() {
               />
             </View>
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="lock-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="Type Your Password Here"
+                placeholderTextColor={theme.icon}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -137,35 +145,45 @@ export default function RegisterScreen() {
             {/* Role Selection */}
             <View style={styles.roleContainer}>
               <TouchableOpacity 
-                style={[styles.roleButton, role === 'student' && styles.activeRoleButton]}
+                style={[
+                  styles.roleButton, 
+                  { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7', borderColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' },
+                  role === 'student' && styles.activeRoleButton
+                ]}
                 onPress={() => setRole('student')}
               >
-                <Text style={[styles.roleButtonText, role === 'student' && styles.activeRoleButtonText]}>Student</Text>
+                <Text style={[styles.roleButtonText, { color: theme.icon }, role === 'student' && styles.activeRoleButtonText]}>Student</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.roleButton, role === 'staff' && styles.activeRoleButton]}
+                style={[
+                  styles.roleButton, 
+                  { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7', borderColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' },
+                  role === 'staff' && styles.activeRoleButton
+                ]}
                 onPress={() => setRole('staff')}
               >
-                <Text style={[styles.roleButtonText, role === 'staff' && styles.activeRoleButtonText]}>Staff</Text>
+                <Text style={[styles.roleButtonText, { color: theme.icon }, role === 'staff' && styles.activeRoleButtonText]}>Staff</Text>
               </TouchableOpacity>
             </View>
 
             {/* University Fields */}
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="school-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="University Name"
+                placeholderTextColor={theme.icon}
                 value={universityName}
                 onChangeText={setUniversityName}
               />
             </View>
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="office-building-marker-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="Department Name"
+                placeholderTextColor={theme.icon}
                 value={departmentName}
                 onChangeText={setDepartmentName}
               />
@@ -173,31 +191,34 @@ export default function RegisterScreen() {
 
             {role === 'student' && (
               <>
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
                   <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.text }]}
                     placeholder="Roll Number"
+                    placeholderTextColor={theme.icon}
                     value={rollNumber}
                     onChangeText={setRollNumber}
                   />
                 </View>
 
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
                   <MaterialCommunityIcons name="book-open-outline" size={24} color="#FF3B70" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.text }]}
                     placeholder="Program (e.g. BSCS)"
+                    placeholderTextColor={theme.icon}
                     value={program}
                     onChangeText={setProgram}
                   />
                 </View>
 
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
                   <MaterialCommunityIcons name="numeric" size={24} color="#FF3B70" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.text }]}
                     placeholder="Semester"
+                    placeholderTextColor={theme.icon}
                     value={semester}
                     onChangeText={setSemester}
                     keyboardType="numeric"
@@ -206,11 +227,12 @@ export default function RegisterScreen() {
               </>
             )}
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>
               <MaterialCommunityIcons name="group" size={24} color="#FF3B70" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="Section (Optional)"
+                placeholderTextColor={theme.icon}
                 value={section}
                 onChangeText={setSection}
               />
@@ -232,7 +254,7 @@ export default function RegisterScreen() {
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already Have an Account! </Text>
+              <Text style={[styles.footerText, { color: theme.text }]}>Already Have an Account! </Text>
               <Link href="/login" asChild>
                 <TouchableOpacity>
                   <Text style={styles.linkText}>Sign In</Text>
