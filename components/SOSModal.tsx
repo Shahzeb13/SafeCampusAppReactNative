@@ -15,8 +15,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { sosService } from '../services/sosService';
+import { SosMessageSendingService } from '../services/SosMessageSendingService';
+import { useAuth } from '../context/AuthContext';
 import { useSnackbar } from '../context/SnackbarContext';
 import { handleApiError } from '../utils/errorHandling';
+
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +33,7 @@ type SOSStatus = 'confirming' | 'sending' | 'success' | 'error';
 type LiveSOSStatus = 'active' | 'acknowledged' | 'responding' | 'resolved';
 
 export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigger = false }) => {
+  const { user } = useAuth();
   const { showSnackbar } = useSnackbar();
 
   const TimelineStep = ({ icon, color, label, isActive, isFirst, isLast }: any) => (
@@ -130,7 +134,7 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
       }
 
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Highest,
       });
 
       const response = await sosService.triggerSOS(
@@ -138,13 +142,22 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
         location.coords.longitude
       );
 
-      if (response.success) {
-        setTimestamp(new Date().toLocaleTimeString());
-        setCurrentSosId(response.sosId || null);
-        setLiveStatus('active');
-        setStatus('success');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+        if (response.success) {
+          setTimestamp(new Date().toLocaleTimeString());
+          setCurrentSosId(response.sosId || null);
+          setLiveStatus('active');
+          setStatus('success');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+          // Notify personal contacts via WhatsApp
+          await SosMessageSendingService.sendWhatsAppSos(
+            user?.personalEmergencyContacts || [],
+            location.coords.latitude,
+            location.coords.longitude
+          );
+
+        }
+
     } catch (err: any) {
       handleApiError(err, showSnackbar);
       setErrorMsg(err.response?.data?.message || err.message || 'Alert broadcast failed.');

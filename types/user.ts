@@ -1,5 +1,10 @@
 export type UserRole = "student" | "staff" | "admin";
 
+export interface PersonalContact {
+  name: string;
+  phoneNumber: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -7,6 +12,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   token?: string;
+  personalEmergencyContacts?: PersonalContact[];
   // University specific fields
   rollNumber?: string;
   universityName?: string;

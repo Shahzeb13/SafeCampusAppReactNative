@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { User, PersonalContact } from '../types/user';
 import { useSnackbar } from '../context/SnackbarContext';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -90,7 +91,7 @@ export default function ManageContactsScreen() {
     );
   };
 
-  const renderContactItem = ({ item, index }: { item: any, index: number }) => (
+  const renderContactItem = ({ item, index }: { item: PersonalContact, index: number }) => (
     <View style={[styles.contactCard, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : 'white' }]}>
       <View style={styles.contactInfo}>
         <View style={styles.contactIcon}>

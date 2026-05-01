@@ -79,7 +79,7 @@ function HomeScreen() {
     
     const startShakeDetection = async () => {
       // High threshold for safety (8.0+ is a very violent shake)
-      const SHAKE_THRESHOLD = 8.0; 
+      const SHAKE_THRESHOLD = 5.0; 
       let lastUpdate = 0;
 
       subscription = Accelerometer.addListener(accelerometerData => {
