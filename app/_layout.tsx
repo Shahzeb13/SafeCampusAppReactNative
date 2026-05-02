@@ -12,6 +12,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SnackbarProvider } from '../context/SnackbarContext';
 import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '../context/ThemeContext';
+import { notificationService } from '../services/notificationService';
+import * as Notifications from 'expo-notifications';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -43,6 +45,7 @@ function LayoutContent() {
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
+      notificationService.requestPermissions();
     }
   }, [loaded, error]);
 

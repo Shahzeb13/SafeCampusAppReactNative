@@ -148,14 +148,18 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
           setLiveStatus('active');
           setStatus('success');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          
+          showSnackbar('🚨 SOS Sent! Help is on the way.', 'success');
 
           // Notify personal contacts via WhatsApp
-          await SosMessageSendingService.sendWhatsAppSos(
-            user?.personalEmergencyContacts || [],
-            location.coords.latitude,
-            location.coords.longitude
-          );
-
+          if (user?.personalEmergencyContacts && user.personalEmergencyContacts.length > 0) {
+            await SosMessageSendingService.sendWhatsAppSos(
+              user.personalEmergencyContacts,
+              location.coords.latitude,
+              location.coords.longitude
+            );
+            showSnackbar('📱 Trusted circle notified via WhatsApp', 'info');
+          }
         }
 
     } catch (err: any) {

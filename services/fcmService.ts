@@ -9,6 +9,7 @@ type Token = string;
 type FcmServiceType = {
   init: (userId: UserId) => Promise<void>;
   cleanup: () => void;
+  removeToken: (userId: UserId) => Promise<void>;
   onMessage: (callback: (remoteMessage: any) => void) => void;
 };
 
@@ -81,9 +82,25 @@ const FcmService = (() => {
     messageCallback = null;
   };
 
+  const removeToken = async (userId: UserId): Promise<void> => {
+    try {
+      const token = await getFcmToken();
+      if (token && userId) {
+        await axios.post(`${API_BASE_URL}/users/remove-fcm-token`, {
+          userId,
+          token,
+        });
+        console.log('🧹 FCM Token removed from backend');
+      }
+    } catch (err: any) {
+      console.log('❌ Error removing token:', err.message);
+    }
+  };
+
   return {
     init,
     cleanup,
+    removeToken,
     onMessage,
   } as FcmServiceType;
 })();

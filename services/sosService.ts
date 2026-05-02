@@ -67,8 +67,28 @@ export const getSOSDetails = async (id: string): Promise<SOSHistoryItem> => {
   }
 };
 
+export const getMyAssignments = async (): Promise<any> => {
+  try {
+    const response = await api.get('/sos/my-assignments');
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+export const respondToAssignment = async (sosId: string, response: string, note?: string): Promise<any> => {
+  try {
+    const res = await api.post('/sos/respond', { sosId, response, note });
+    return res.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
 export const sosService = {
   triggerSOS: sendSOSAlert,
   getSOSHistory,
   getSOSDetails,
+  getMyAssignments,
+  respondToAssignment
 };

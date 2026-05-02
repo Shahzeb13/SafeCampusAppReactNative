@@ -25,7 +25,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'staff'>('student');
+  const [role, setRole] = useState<'student' | 'staff' | 'security_personnel'>('student');
   const [rollNumber, setRollNumber] = useState('');
   const [universityName, setUniversityName] = useState('');
   const [departmentName, setDepartmentName] = useState('');
@@ -164,7 +164,18 @@ export default function RegisterScreen() {
               >
                 <Text style={[styles.roleButtonText, { color: theme.icon }, role === 'staff' && styles.activeRoleButtonText]}>Staff</Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.roleButton, 
+                  { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7', borderColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' },
+                  role === 'security_personnel' && styles.activeRoleButton
+                ]}
+                onPress={() => setRole('security_personnel')}
+              >
+                <Text style={[styles.roleButtonText, { color: theme.icon }, role === 'security_personnel' && styles.activeRoleButtonText]}>Security</Text>
+              </TouchableOpacity>
             </View>
+
 
             {/* University Fields */}
             <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F7F7F7' }]}>

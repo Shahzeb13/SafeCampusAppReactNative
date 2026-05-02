@@ -4,10 +4,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { View, StyleSheet, Platform } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
+  const { user } = useAuth();
+
+  const isGuard = user?.role === 'security_personnel';
 
   return (
     <Tabs
@@ -38,18 +42,34 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: isGuard ? 'Duty' : 'Home',
+          href: undefined, // Always show the first tab
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : null}>
-              <MaterialCommunityIcons size={28} name={focused ? "home" : "home-outline"} color={color} />
+              <MaterialCommunityIcons 
+                size={28} 
+                name={isGuard 
+                  ? (focused ? "shield-account" : "shield-account-outline")
+                  : (focused ? "home" : "home-outline")
+                } 
+                color={color} 
+              />
             </View>
           ),
+        }}
+      />
+      {/* Hide guard-dashboard tab as it's now the root index for guards */}
+      <Tabs.Screen
+        name="guard-dashboard"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
         name="safety"
         options={{
           title: 'Safety',
+          href: isGuard ? null : undefined, // hide from guards
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : null}>
               <MaterialCommunityIcons size={28} name={focused ? "shield-check" : "shield-check-outline"} color={color} />
@@ -61,6 +81,7 @@ export default function TabLayout() {
         name="heatmaps"
         options={{
           title: 'Radar',
+          // Keep heatmaps visible for guards as requested
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : null}>
               <MaterialCommunityIcons size={28} name={focused ? "radar" : "radar"} color={color} />
@@ -72,6 +93,7 @@ export default function TabLayout() {
         name="emergency"
         options={{
           title: 'SOS',
+          href: isGuard ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.sosIconContainer, focused && styles.sosIconActive]}>
               <MaterialCommunityIcons size={32} name="phone-alert" color="white" />
@@ -84,6 +106,7 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: 'Alerts',
+          href: isGuard ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : null}>
               <MaterialCommunityIcons size={28} name={focused ? "bell" : "bell-outline"} color={color} />

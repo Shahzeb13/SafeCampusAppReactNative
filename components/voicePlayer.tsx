@@ -17,12 +17,15 @@ import { VoiceNote } from '@/types/voiceNote';
 import { formatBytes } from '../utils/formatUtils';
 
 type VoicePlayerProps = {
-  voiceNote: VoiceNote;
-  setVoiceNote: React.Dispatch<React.SetStateAction<VoiceNote | null>>;
+  voiceNote?: VoiceNote;
+  setVoiceNote?: React.Dispatch<React.SetStateAction<VoiceNote | null>>;
+  audioUri?: string;
+  duration?: number;
 };
 
-export default function VoicePlayer({ voiceNote, setVoiceNote }: VoicePlayerProps) {
-  const player = useAudioPlayer(voiceNote);
+export default function VoicePlayer({ voiceNote, setVoiceNote, audioUri, duration }: VoicePlayerProps) {
+  const uri = voiceNote?.uri || audioUri;
+  const player = useAudioPlayer(uri || '');
   const status = useAudioPlayerStatus(player);
 
   const handlePlayPause = () => {
@@ -38,8 +41,10 @@ export default function VoicePlayer({ voiceNote, setVoiceNote }: VoicePlayerProp
   };
 
   const handleDelete = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    setVoiceNote(null);
+    if (setVoiceNote) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setVoiceNote(null);
+    }
   };
 
   const formatDuration = (ms: number) => {
@@ -49,7 +54,8 @@ export default function VoicePlayer({ voiceNote, setVoiceNote }: VoicePlayerProp
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const progress = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
+  const currentDuration = status.duration > 0 ? status.duration : (voiceNote?.durationMs || duration || 0);
+  const progress = currentDuration > 0 ? (status.currentTime / currentDuration) * 100 : 0;
 
   return (
     <View style={styles.container}>
@@ -57,17 +63,19 @@ export default function VoicePlayer({ voiceNote, setVoiceNote }: VoicePlayerProp
         <View style={styles.topRow}>
           <View style={styles.badge}>
             <MaterialCommunityIcons name="waveform" size={14} color="#FF3B70" />
-            <Text style={styles.badgeText}>Voice Note • {formatBytes(voiceNote.fileSize)}</Text>
+            <Text style={styles.badgeText}>Voice Note {voiceNote?.fileSize ? `• ${formatBytes(voiceNote.fileSize)}` : ''}</Text>
           </View>
-          <Pressable
-            onPress={handleDelete}
-            style={({ pressed }) => [
-              styles.deleteButton,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <MaterialCommunityIcons name="close-circle-outline" size={22} color="#9E9E9E" />
-          </Pressable>
+          {setVoiceNote && (
+            <Pressable
+              onPress={handleDelete}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.buttonPressed
+              ]}
+            >
+              <MaterialCommunityIcons name="close-circle-outline" size={22} color="#9E9E9E" />
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.playerContent}>
@@ -88,7 +96,7 @@ export default function VoicePlayer({ voiceNote, setVoiceNote }: VoicePlayerProp
           <View style={styles.audioMeta}>
             <View style={styles.timeInfo}>
               <Text style={styles.currentTimeText}>{formatDuration(status.currentTime)}</Text>
-              <Text style={styles.durationText}>{formatDuration(status.duration)}</Text>
+              <Text style={styles.durationText}>{formatDuration(currentDuration)}</Text>
             </View>
             
             <View style={styles.progressTrack}>

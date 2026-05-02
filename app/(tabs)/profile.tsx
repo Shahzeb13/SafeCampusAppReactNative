@@ -18,6 +18,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
   const [testing, setTesting] = useState(false);
+  const isGuard = user?.role === 'security_personnel';
 
   const handleTestServer = async () => {
     setTesting(true);
@@ -90,22 +91,28 @@ export default function ProfileScreen() {
           onPress={() => router.push('/manage-contacts')}
         >
           <MaterialCommunityIcons name="account-group-outline" size={24} color="#FF3B70" />
-          <Text style={[styles.menuText, { color: theme.text }]}>Trusted Circle (SOS Contacts)</Text>
+          <Text style={[styles.menuText, { color: theme.text }]}>
+            {user?.role === 'security_personnel' ? 'Personal SOS Contacts' : 'Trusted Circle (SOS Contacts)'}
+          </Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, { backgroundColor: theme.background }]}>
-          <MaterialCommunityIcons name="shield-outline" size={24} color={theme.icon} />
-          <Text style={[styles.menuText, { color: theme.text }]}>Safety Awareness</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
-        </TouchableOpacity>
+        {!isGuard && (
+          <TouchableOpacity style={[styles.menuItem, { backgroundColor: theme.background }]}>
+            <MaterialCommunityIcons name="shield-outline" size={24} color={theme.icon} />
+            <Text style={[styles.menuText, { color: theme.text }]}>Safety Awareness</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity 
           style={[styles.menuItem, { backgroundColor: theme.background }]}
-          onPress={() => router.push('/sos-history' as any)}
+          onPress={() => router.push(isGuard ? '/guard-dashboard' as any : '/sos-history' as any)}
         >
           <MaterialCommunityIcons name="history" size={24} color="#FF3B70" />
-          <Text style={[styles.menuText, { color: theme.text }]}>SOS Alerts History</Text>
+          <Text style={[styles.menuText, { color: theme.text }]}>
+            {isGuard ? 'Incident History' : 'SOS Alerts History'}
+          </Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color={theme.icon} />
         </TouchableOpacity>
 

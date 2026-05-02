@@ -90,8 +90,10 @@ export default function VoiceRecorder({ setVoiceNote }: VoiceRecorderProps) {
 
   const startRecording = async () => {
     try {
+      console.log("start recording button presssed");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await recorder.prepareToRecordAsync();
+      // console.log("hey form here");
       recorder.record();
     } catch (error) {
       console.log('startRecording error:', error);

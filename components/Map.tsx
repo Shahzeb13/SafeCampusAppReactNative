@@ -88,7 +88,15 @@ const MapLive = (props: MapLiveProps) => {
 
     const handleMapPress = (e: any) => {
         if (!interactive || !onLocationChange) return;
-        const [lng, lat] = e.geometry.coordinates;
+        
+        // Handle different event structures across MapLibre versions
+        const geometry = e.geometry || e.nativeEvent?.geometry;
+        if (!geometry || !geometry.coordinates) {
+            console.warn("Map press event missing geometry data");
+            return;
+        }
+
+        const [lng, lat] = geometry.coordinates;
         setTrackingMode(undefined as any);
         handleLocationUpdate(lng, lat);
     };

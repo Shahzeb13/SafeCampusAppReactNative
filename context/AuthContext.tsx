@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
         setAuthToken(storedToken);
+        console.log("🔑 [FRONTEND] Persistent JWT Token:", storedToken);
         
         // Init FCM
         const userObj = JSON.parse(storedUser);
@@ -65,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData);
     setToken(authToken);
     setAuthToken(authToken);
+    console.log("🔑 [FRONTEND] Login JWT Token:", authToken);
     try {
       await AsyncStorage.setItem('userToken', authToken);
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
@@ -87,7 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(null);
     try {
       // Cleanup FCM
+      if (user?.id) {
+        await FcmService.removeToken(user.id);
+      }
       FcmService.cleanup();
+      
       
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userData');

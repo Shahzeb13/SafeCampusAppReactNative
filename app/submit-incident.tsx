@@ -23,6 +23,7 @@ import MapLive from '@/components/Map';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useTheme } from '../context/ThemeContext';
 import { incidentService } from '../services/incidentService';
+import { notificationService } from '../services/notificationService';
 import { IncidentType } from '../types/incident';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import VoicePlayer from '@/components/voicePlayer';
@@ -30,10 +31,21 @@ import { VoiceNote } from '@/types/voiceNote';
 import { IncidentMedia } from '@/types/incidentMedia';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { handleApiError } from '../utils/errorHandling';
+import { Video, Image } from 'react-native-compressor';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import MediaPreview from '@/components/MediaPreview';
 import MediaPicker from '@/components/MediaPicker';
 import CameraCapture from '@/components/CameraCapture';
+
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
 
 const INCIDENT_TYPES: { label: string; value: IncidentType }[] = [
   { label: 'Theft', value: 'theft' },
@@ -192,21 +204,6 @@ export default function SubmitIncidentScreen() {
     }
   };
 
-  const handleMapPress = async (e: any) => {
-    const [lng, lat] = e.geometry.coordinates;
-    setLatitude(lat);
-    setLongitude(lng);
-
-    try {
-      const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      if (address) {
-        const text = `${address.name || ''} ${address.street || ''}, ${address.city || ''}`.trim();
-        setLocationText(text);
-      }
-    } catch (error) {
-      console.log('Reverse geocode error', error);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!title || !description || !incidentType || !locationText) {
@@ -237,29 +234,100 @@ export default function SubmitIncidentScreen() {
         formData.append('voiceDuration', String(voiceNote.durationMs));
       }
 
-      mediaList
-        .filter(item => item.type === 'image')
-        .forEach((image, index) => {
+      let totalOriginal = 0;
+      let totalCompressed = 0;
+
+      // Elite Image Compression
+      const imageList = mediaList.filter(item => item.type === 'image');
+      for (let i = 0; i < imageList.length; i++) {
+        const image = imageList[i];
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(image.uri);
+          const originalSize = fileInfo.exists ? fileInfo.size : 0;
+          totalOriginal += (originalSize || 0);
+          
+          console.log(`[Image ${i+1}] Compressing... Original: ${formatBytes(originalSize || 0)}`);
+          
+          const compressedUri = await Image.compress(image.uri, {
+            compressionMethod: 'auto',
+            quality: 0.7,
+          });
+
+          const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
+          const compressedSize = compressedInfo.exists ? compressedInfo.size : 0;
+          totalCompressed += (compressedSize || 0);
+          
+          console.log(`[Image ${i+1}] Done! Compressed: ${formatBytes(compressedSize || 0)} (Saved ${Math.round((1 - (compressedSize || 0) / (originalSize || 1)) * 100)}%)`);
+          
           formData.append('images', {
-            uri: image.uri,
-            name: image.fileName || `image_${Date.now()}_${index}.jpg`,
+            uri: compressedUri,
+            name: image.fileName || `image_${Date.now()}_${i}.jpg`,
             type: 'image/jpeg',
           } as any);
-        });
+        } catch (compressionError) {
+          console.error('Image compression failed, using original', compressionError);
+          formData.append('images', {
+            uri: image.uri,
+            name: image.fileName || `image_${Date.now()}_${i}.jpg`,
+            type: 'image/jpeg',
+          } as any);
+        }
+      }
 
+      // Elite Video Compression
       const videoMedia = mediaList.find(item => item.type === 'video');
       if (videoMedia) {
-        formData.append('video', {
-          uri: videoMedia.uri,
-          name: videoMedia.fileName || `video_${Date.now()}.mp4`,
-          type: 'video/mp4',
-        } as any);
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(videoMedia.uri);
+          const originalSize = fileInfo.exists ? fileInfo.size : 0;
+          totalOriginal += (originalSize || 0);
+          
+          console.log(`[Video] Compressing... Original: ${formatBytes(originalSize || 0)}`);
+          
+          const compressedVideoUri = await Video.compress(
+            videoMedia.uri,
+            {
+              compressionMethod: 'auto',
+            }
+          );
+
+          const compressedInfo = await FileSystem.getInfoAsync(compressedVideoUri);
+          const compressedSize = compressedInfo.exists ? compressedInfo.size : 0;
+          totalCompressed += (compressedSize || 0);
+          
+          console.log(`[Video] Done! Compressed: ${formatBytes(compressedSize || 0)} (Saved ${Math.round((1 - (compressedSize || 0) / (originalSize || 1)) * 100)}%)`);
+
+          formData.append('video', {
+            uri: compressedVideoUri,
+            name: videoMedia.fileName || `video_${Date.now()}.mp4`,
+            type: 'video/mp4',
+          } as any);
+        } catch (compressionError) {
+          console.error('Video compression failed, using original', compressionError);
+          formData.append('video', {
+            uri: videoMedia.uri,
+            name: videoMedia.fileName || `video_${Date.now()}.mp4`,
+            type: 'video/mp4',
+          } as any);
+        }
       }
 
       await incidentService.createIncident(formData as any);
 
       await clearDraft(); 
-      showSnackbar('Incident reported successfully', 'success');
+      
+      const savedText = totalOriginal > 0 
+        ? `\nSaved ${formatBytes(totalOriginal - totalCompressed)} of data!`
+        : '';
+        
+      showSnackbar(`✅ Incident reported successfully.${savedText}`, 'success');
+      
+      // Trigger Local Expo Notification
+      await notificationService.sendLocalNotification(
+        'Incident Reported',
+        'Your report has been successfully transmitted to SafeCampus Security.'
+      );
+
       router.back();
     } catch (error: any) {
       handleApiError(error, showSnackbar);

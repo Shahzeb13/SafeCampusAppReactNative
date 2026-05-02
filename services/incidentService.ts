@@ -22,4 +22,20 @@ export const incidentService = {
     const response = await api.get(`/incidents/${id}`);
     return response.data;
   },
+
+  // Security Personnel: Get assigned incidents
+  getMyAssignments: async (): Promise<any> => {
+    const response = await api.get('/incidents/my-assignments');
+    return response.data;
+  },
+
+  // Security Personnel: Respond to an assignment
+  respondToAssignment: async (incidentId: string, responseType: string, note?: string): Promise<any> => {
+    const response = await api.post('/incidents/respond-assignment', {
+      incidentId,
+      response: responseType,
+      note,
+    });
+    return response.data;
+  },
 };

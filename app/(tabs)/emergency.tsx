@@ -18,11 +18,13 @@ import { Colors } from '@/constants/theme';
 import { emergencyService, EmergencyContact } from '../../services/emergencyService';
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { userService } from '../../services/userService';
 
 export default function EmergencyScreen() {
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
     const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+    const [personalContacts, setPersonalContacts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingContact, setEditingContact] = useState<Partial<EmergencyContact> | null>(null);
@@ -41,8 +43,13 @@ export default function EmergencyScreen() {
 
     const fetchContacts = async () => {
         try {
-            const data = await emergencyService.getContacts();
-            setContacts(data);
+            setLoading(true);
+            const [globalData, personalData] = await Promise.all([
+                emergencyService.getContacts(),
+                userService.getPersonalContacts()
+            ]);
+            setContacts(globalData);
+            setPersonalContacts(personalData.contacts || []);
         } catch (error) {
             console.error('Error fetching contacts', error);
         } finally {
@@ -221,13 +228,13 @@ export default function EmergencyScreen() {
                 renderItem={renderContact}
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
-                    user?.personalEmergencyContacts && user.personalEmergencyContacts.length > 0 ? (
+                    personalContacts && personalContacts.length > 0 ? (
                         <View style={styles.personalSection}>
                             <View style={styles.sectionHeader}>
                                 <MaterialCommunityIcons name="account-group" size={20} color="#2196F3" />
                                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Personal SOS Contacts</Text>
                             </View>
-                            {user.personalEmergencyContacts.map((item, index) => (
+                            {personalContacts.map((item, index) => (
                                 <View key={index}>
                                     {renderPersonalContact({ item })}
                                 </View>
