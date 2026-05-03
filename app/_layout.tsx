@@ -45,7 +45,7 @@ function LayoutContent() {
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
-      notificationService.requestPermissions();
+      notificationService.init();
     }
   }, [loaded, error]);
 

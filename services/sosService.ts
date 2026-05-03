@@ -19,7 +19,7 @@ export interface SOSHistoryItem {
   _id: string;
   userId: string;
   status: 'active' | 'acknowledged' | 'resolved';
-  triggerType: 'button';
+  triggerType: 'button' | 'shake';
   location: {
     latitude: number;
     longitude: number;
@@ -35,11 +35,12 @@ export interface SOSHistoryItem {
 /**
  * Sends a high-priority SOS alert to the backend with the user's current GPS coordinates.
  */
-export const sendSOSAlert = async (latitude: number, longitude: number, note?: string): Promise<SOSResponse> => {
+export const sendSOSAlert = async (latitude: number, longitude: number, note?: string, triggerType: 'button' | 'shake' = 'button'): Promise<SOSResponse> => {
   try {
     const response = await api.post<SOSResponse>('/sos/trigger', {
       location: { latitude, longitude },
-      note
+      note,
+      triggerType
     });
     return response.data;
   } catch (error: any) {

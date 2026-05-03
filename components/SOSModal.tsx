@@ -19,6 +19,7 @@ import { SosMessageSendingService } from '../services/SosMessageSendingService';
 import { useAuth } from '../context/AuthContext';
 import { useSnackbar } from '../context/SnackbarContext';
 import { handleApiError } from '../utils/errorHandling';
+import { notificationService } from '../services/notificationService';
 
 
 const { width } = Dimensions.get('window');
@@ -111,6 +112,11 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
           if (details.status !== liveStatus) {
             setLiveStatus(details.status as LiveSOSStatus);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            
+            notificationService.sendLocalNotification(
+              'SOS Update 🚨',
+              `Your emergency status is now: ${details.status.toUpperCase()}`
+            );
           }
         } catch (err) {
           console.error("Polling error:", err);
@@ -150,6 +156,11 @@ export const SOSModal: React.FC<SOSModalProps> = ({ visible, onClose, autoTrigge
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           
           showSnackbar('🚨 SOS Sent! Help is on the way.', 'success');
+          
+          notificationService.notifyEmergency(
+            'SOS BROADCAST ACTIVE',
+            'Campus Security has been alerted to your position. Help is on the way.'
+          );
 
           // Notify personal contacts via WhatsApp
           if (user?.personalEmergencyContacts && user.personalEmergencyContacts.length > 0) {

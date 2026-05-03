@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { Incident } from '../types/incident';
 import { StatusBadge } from './StatusBadge';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 interface IncidentCardProps {
   incident: Incident;
@@ -11,27 +13,41 @@ interface IncidentCardProps {
 
 export const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onPress }) => {
   const date = new Date(incident.createdAt).toLocaleDateString();
+  const { theme: appTheme } = useTheme();
+  const colorScheme = appTheme ?? 'light';
+  const theme = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: theme.background, borderColor: isDark ? '#333' : '#F0F0F0' }]} 
+      onPress={onPress} 
+      activeOpacity={0.7}
+    >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={1}>{incident.title}</Text>
-          <Text style={styles.typeText}>{incident.incidentType.replace('_', ' ')}</Text>
+          <Text style={[styles.title, { color: isDark ? '#fff' : '#1A237E' }]} numberOfLines={1}>
+            {incident.title}
+          </Text>
+          <Text style={[styles.typeText, { color: theme.icon }]}>
+            {incident.incidentType.replace('_', ' ')}
+          </Text>
         </View>
         <StatusBadge status={incident.status} />
       </View>
       
-      <Text style={styles.description} numberOfLines={2}>
+      <Text style={[styles.description, { color: isDark ? '#CCC' : '#424242' }]} numberOfLines={2}>
         {incident.description}
       </Text>
       
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: isDark ? '#333' : '#F5F5F5' }]}>
         <View style={styles.footerItem}>
-          <MaterialCommunityIcons name="map-marker-outline" size={14} color="#757575" />
-          <Text style={styles.footerText} numberOfLines={1}>{incident.locationText}</Text>
+          <MaterialCommunityIcons name="map-marker-outline" size={14} color={isDark ? '#AAA' : '#757575'} />
+          <Text style={[styles.footerText, { color: isDark ? '#AAA' : '#757575' }]} numberOfLines={1}>
+            {incident.locationText}
+          </Text>
         </View>
-        <Text style={styles.dateText}>{date}</Text>
+        <Text style={[styles.dateText, { color: theme.icon }]}>{date}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -39,7 +55,6 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onPress })
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -48,6 +63,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
+    borderWidth: 1,
   },
   header: {
     flexDirection: 'row',
@@ -61,17 +77,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1A237E',
+    fontFamily: 'Inter_700Bold',
   },
   typeText: {
     fontSize: 12,
-    color: '#757575',
+    fontFamily: 'Inter_400Regular',
     textTransform: 'capitalize',
+    marginTop: 2,
   },
   description: {
     fontSize: 14,
-    color: '#424242',
+    fontFamily: 'Inter_400Regular',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -80,7 +96,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#F5F5F5',
     paddingTop: 10,
   },
   footerItem: {
@@ -90,11 +105,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#757575',
+    fontFamily: 'Inter_400Regular',
     marginLeft: 4,
   },
   dateText: {
     fontSize: 12,
-    color: '#9E9E9E',
+    fontFamily: 'Inter_400Regular',
   },
 });
+

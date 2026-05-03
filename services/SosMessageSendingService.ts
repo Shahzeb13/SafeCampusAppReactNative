@@ -46,15 +46,21 @@ export const SosMessageSendingService = {
             
             // 4. Send to WhatsApp (Primary Personal Contact)
             if (primaryContact) {
-                const cleanPhone = primaryContact.phoneNumber.replace(/\D/g, '');
-                const url = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+                let cleanPhone = primaryContact.phoneNumber.replace(/\D/g, '');
+                
+                // Ensure international format (assuming Pakistan +92 if starts with 03 or 3)
+                if (cleanPhone.startsWith('03')) {
+                    cleanPhone = '92' + cleanPhone.substring(1);
+                } else if (cleanPhone.startsWith('3') && cleanPhone.length === 10) {
+                    cleanPhone = '92' + cleanPhone;
+                }
+
+                // Use wa.me which is more reliable than whatsapp://
+                const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                
                 try {
-                    const supported = await Linking.canOpenURL(url);
-                    if (supported) {
-                        await Linking.openURL(url);
-                        // We return here because WhatsApp is now open for the family member
-                        return; 
-                    }
+                    await Linking.openURL(url);
+                    return; 
                 } catch (e) {
                     console.warn("WhatsApp open failed, falling back to multi-SMS...");
                 }

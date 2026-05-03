@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import FcmService from '../services/fcmService';
 import { useSnackbar } from './SnackbarContext';
+import { backgroundSOS } from '../services/backgroundSOS';
 
 interface AuthContextType {
   user: User | null;
@@ -37,7 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
     });
+
+    return () => {
+        backgroundSOS.stop();
+    }
   }, []);
+
+  // Monitor token changes to start/stop background SOS
+  useEffect(() => {
+    if (token) {
+        backgroundSOS.start();
+    } else {
+        backgroundSOS.stop();
+    }
+  }, [token]);
 
   const loadStoredAuth = async () => {
     try {

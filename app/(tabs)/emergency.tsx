@@ -19,6 +19,7 @@ import { emergencyService, EmergencyContact } from '../../services/emergencyServ
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { userService } from '../../services/userService';
+import { notificationService } from '../../services/notificationService';
 
 export default function EmergencyScreen() {
     const { user } = useAuth();
@@ -78,8 +79,10 @@ export default function EmergencyScreen() {
             fetchContacts();
             setModalVisible(false);
             resetForm();
+            notificationService.notifySuccess('Contact Saved');
         } catch (error) {
             showSnackbar('Failed to save contact', 'error');
+            notificationService.notifyError('Failed to Save', 'Could not save the emergency contact.');
         }
     };
 
@@ -97,8 +100,10 @@ export default function EmergencyScreen() {
                             await emergencyService.deleteContact(id);
                             showSnackbar('Contact deleted', 'success');
                             fetchContacts();
+                            notificationService.notifySuccess('Contact Deleted', 'The contact has been removed from your list.');
                         } catch (error) {
                             showSnackbar('Failed to delete contact', 'error');
+                            notificationService.notifyError('Delete Failed', 'Could not remove the contact from the system.');
                         }
                     }
                 }

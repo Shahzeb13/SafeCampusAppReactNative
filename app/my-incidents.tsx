@@ -1,4 +1,3 @@
-// Route: my-incidents
 import React, { useEffect, useState } from 'react';
 import { 
   View, 
@@ -7,19 +6,27 @@ import {
   FlatList, 
   TouchableOpacity, 
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  SafeAreaView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { incidentService } from '../services/incidentService';
 import { Incident } from '../types/incident';
 import { IncidentCard } from '../components/IncidentCard';
+import { Colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function MyIncidentsScreen() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  
+  const { theme: appTheme } = useTheme();
+  const colorScheme = appTheme ?? 'light';
+  const theme = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
 
   const fetchIncidents = async () => {
     try {
@@ -44,20 +51,20 @@ export default function MyIncidentsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color="#FF3B70" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#1A237E" />
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#000' : '#F8F9FA' }]}>
+      <View style={[styles.header, { backgroundColor: theme.background, borderBottomColor: isDark ? '#333' : '#F0F0F0' }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Reports</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.headerTitle, { color: theme.text }]}>My Reports</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <FlatList
@@ -71,12 +78,17 @@ export default function MyIncidentsScreen() {
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF3B70']} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={['#FF3B70']} 
+            tintColor={isDark ? '#fff' : '#FF3B70'}
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="file-search-outline" size={80} color="#E0E0E0" />
-            <Text style={styles.emptyText}>No incidents reported yet</Text>
+            <MaterialCommunityIcons name="file-search-outline" size={80} color={isDark ? '#333' : '#E0E0E0'} />
+            <Text style={[styles.emptyText, { color: theme.icon }]}>No incidents reported yet</Text>
             <TouchableOpacity 
               style={styles.reportButton}
               onPress={() => router.push('/submit-incident')}
@@ -86,14 +98,13 @@ export default function MyIncidentsScreen() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   center: {
     flex: 1,
@@ -104,17 +115,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A237E',
+    fontFamily: 'Outfit_700Bold',
   },
   listContent: {
-    padding: 15,
+    padding: 20,
     flexGrow: 1,
   },
   emptyContainer: {
@@ -125,7 +140,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9E9E9E',
+    fontFamily: 'Inter_400Regular',
     marginTop: 20,
     marginBottom: 30,
   },
@@ -134,9 +149,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 25,
+    elevation: 4,
+    shadowColor: '#FF3B70',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   reportButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
   },
 });
+

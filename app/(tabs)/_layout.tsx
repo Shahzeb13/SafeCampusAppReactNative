@@ -115,6 +115,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          href: isGuard ? null : undefined,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconContainer : null}>
+              <MaterialCommunityIcons size={28} name={focused ? "chat" : "chat-outline"} color={color} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
